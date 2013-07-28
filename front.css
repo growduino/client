@@ -1,0 +1,38 @@
+html, body {
+	margin: 0;
+	padding: 0;
+}
+
+.layout {
+	text-align: center;
+}
+
+#main {
+	margin: 25px auto;
+	width: 960px;
+
+	border: 1px solid #ccc;
+	background: beige;
+}
+
+#log {
+	margin: 25px auto;
+	width: 960px;
+
+	border: 1px solid #ccc;
+	background: #fafafa;
+}
+.log-message {}
+.log-message-time {
+	color: #999;
+}
+.log-message-name {
+	font-weight: bold;
+}
+.log-message-text {
+	font-style: italic;
+}
+
+.template {
+	display: none;
+}
