@@ -5,6 +5,7 @@ html, body {
 
 .layout {
 	text-align: center;
+	font-family: sans-serif;
 }
 
 #main {
@@ -22,12 +23,21 @@ html, body {
 	border: 1px solid #ccc;
 	background: #fafafa;
 }
-.log-message {}
+.log-message {
+	padding: 2px;
+	text-align: left;
+}
+.log-message:hover {
+	background: #ecfaec;
+}
+.log-message.info {
+	color: #669;
+}
+.log-message.error {
+	color: #900;
+}
 .log-message-time {
 	color: #999;
-}
-.log-message-name {
-	font-weight: bold;
 }
 .log-message-text {
 	font-style: italic;

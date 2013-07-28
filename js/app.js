@@ -2,7 +2,7 @@
  *	Application bootstrap file
  *  - Growduino Client v 0.1 -
  */
-define([], function(){
+define(['view/log'], function(Log){
 	var exports = {};
 
 		exports.VERSION = '0.1';
@@ -30,7 +30,11 @@ define([], function(){
 		 * @return fluent
 		 */
 		exports.init = function(){
-			console.log(this.NAME + ' ' + this.VERSION);
+			Log.start($('#log'));
+			Log.show(this.NAME + ' ' + this.VERSION + ' starting..');
+
+			//Log.show('Ready', Log.INFO);
+			//Log.show('Oh we hav prblm', Log.ERROR);
 
 			return this;
 		};
