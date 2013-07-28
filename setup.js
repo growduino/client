@@ -13,7 +13,10 @@ require.config({
 			exports: '$'
 		},
 		'underscore': {
-            exports: '_'
+            exports: '_',
+			init: function(){
+				this._.templateSettings = {interpolate : /\{(.+?)\}/g};
+			}
         },
         'backbone': {
             deps: ['underscore', 'jquery'],

@@ -1,4 +1,5 @@
-// Visual logging
+// Visual logger
+
 define(['jquery', 'underscore', 'backbone'], function(){
 	var exports = Backbone.View.extend();
 
@@ -11,8 +12,9 @@ define(['jquery', 'underscore', 'backbone'], function(){
 		exports.messageTemplate = {};
 
 		/**
-		 * @param {Object) $(#logTerminal)
-		 * @return fluent
+		 * @param  {Object} $el
+		 * @param  {Object} options [optional]
+		 * @return {Object} fluent
 		 */
 		exports.start = function($el, options) {
 			this.$el = $el;
@@ -21,14 +23,18 @@ define(['jquery', 'underscore', 'backbone'], function(){
 			var $messageTemplate = $(this.$el.find('.log-message.template').detach());
 				$messageTemplate.removeClass('template');
 
+			if ($messageTemplate.size() === 0) {
+				throw 'Message template not found!';
+			}
+
 			this.messageTemplate = $messageTemplate.prop('outerHTML');	// olol
 
 			return this;
 		};
 
 		/**
-		 * @param {Object} options
-		 * @return fluent
+		 * @param  {Object} options
+		 * @return {Object} fluent
 		 */
 		exports.config = function(options) {
 			for (var i in options) {
@@ -39,13 +45,12 @@ define(['jquery', 'underscore', 'backbone'], function(){
 		}
 
 		/**
-		 * @param {String} name
-		 * @param {String} text
-		 * @return fluent
+		 * @param  {String} text
+		 * @param  {String} type [optional]
+		 * @return {Object} fluent
 		 */
 		exports.show = function(text, type){
 			type = type || 'info';
-			_.templateSettings = {interpolate : /\{(.+?)\}/g};
 
 			var message = _.template(this.messageTemplate);
 			var date = new Date();
