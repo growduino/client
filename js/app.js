@@ -1,7 +1,6 @@
-/**
- *	Application bootstrap file
- *  - Growduino Client v 0.1 -
- */
+// Application bootstrap file
+// - Growduino Client v 0.1 -
+
 define(['view/log'], function(Log){
 	var exports = {};
 
@@ -19,7 +18,7 @@ define(['view/log'], function(Log){
 		exports.config = function(options){
 			options = options || {};
 
-			for (i in options) {
+			for (var i in options) {
 				this.options[i] = options[i];
 			}
 
@@ -32,9 +31,6 @@ define(['view/log'], function(Log){
 		exports.init = function(){
 			Log.start($('#log'));
 			Log.show(this.NAME + ' ' + this.VERSION + ' starting..');
-
-			//Log.show('Ready', Log.INFO);
-			//Log.show('Oh we hav prblm', Log.ERROR);
 
 			return this;
 		};
