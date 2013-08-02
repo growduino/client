@@ -5,11 +5,9 @@ define(['view/log'], function(Log){
 	var exports = {};
 
 		exports.VERSION = '0.1';
-		exports.NAME = 'GrowduinoClient';
+		exports.NAME = 'ArduinoClient';
 
-		exports.options = {
-
-		};
+		exports.options = {};
 
 		/**
 		 * @param {Object} options
@@ -28,8 +26,10 @@ define(['view/log'], function(Log){
 		/**
 		 * @return fluent
 		 */
-		exports.init = function(){
-			Log.start($('#log'));
+		exports.init = function($el){
+			$el = $el || $('#log');
+
+			Log.start($el);
 			Log.show(this.NAME + ' ' + this.VERSION + ' starting..');
 
 			return this;

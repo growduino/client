@@ -1,20 +1,26 @@
 // Visual logger
+define(['util/mx-conf', 'jquery', 'underscore', 'backbone'], function(configurable){
+//	console.log(configurable);
 
-define(['jquery', 'underscore', 'backbone'], function(){
-	var exports = Backbone.View.extend();
+	/** @var {Backbone.View} */
+	var exports = {};
+
+		exports.NAME = 'Logger';
 
 		exports.INFO = 'info';
 		exports.ERROR = 'error';
 
 		exports.options = {
-			'messageCount': 5
+			messageCount: 5,
+			messageTemplate: ''	// html string for _
 		};
-		exports.messageTemplate = {};
+
+		exports.messages = [];
 
 		/**
 		 * @param  {Object} $el
-		 * @param  {Object} options [optional]
-		 * @return {Object} fluent
+		 * @param  {Object} options [optional] #configurable mixin
+		 * @return {Backbone.View} fluent
 		 */
 		exports.start = function($el, options) {
 			this.$el = $el;
@@ -27,22 +33,10 @@ define(['jquery', 'underscore', 'backbone'], function(){
 				throw 'Message template not found!';
 			}
 
-			this.messageTemplate = $messageTemplate.prop('outerHTML');	// olol
+			this.options.messageTemplate = $messageTemplate.prop('outerHTML');	// olol
 
 			return this;
 		};
-
-		/**
-		 * @param  {Object} options
-		 * @return {Object} fluent
-		 */
-		exports.config = function(options) {
-			for (var i in options) {
-				this.options[i] = options[i];
-			}
-
-			return this;
-		}
 
 		/**
 		 * @param  {String} text
@@ -52,16 +46,28 @@ define(['jquery', 'underscore', 'backbone'], function(){
 		exports.show = function(text, type){
 			type = type || 'info';
 
-			var message = _.template(this.messageTemplate);
+			// append message using template
+			var template = _.template(this.options['messageTemplate']);
 			var date = new Date();
 			var time = date.getHours() + ':' + date.getMinutes() + ':' + date.getSeconds();
 
-			this.$el.append($(message({
+			var data = {
 				'time': time,
 				'text': text
-			})).addClass(type));
+			};
 
-			while (this.$el.find('.log-message').size() > this.options.messageCount) {
+			this.messages.push(data);
+
+			var message = $(template(data))
+				.addClass(type)
+				.hide();
+
+			this.$el.append(message);
+
+							message.show('slow');
+
+			// remove off-limit messages
+			while (this.$el.find('.log-message').size() > this.options['messageCount']) {
 				this.$el.find('.log-message:first').remove();
 			}
 
@@ -77,7 +83,12 @@ define(['jquery', 'underscore', 'backbone'], function(){
 			return this;
 		};
 
-	return exports;
+	var logConfigurable = _.extend(configurable, exports);
+//		console.log(logConfigurable);
+
+
+	// Enhanced view
+	return _.extend(Backbone.View.extend({}), logConfigurable);
 });
 
 

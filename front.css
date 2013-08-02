@@ -26,6 +26,8 @@ html, body {
 .log-message {
 	padding: 2px;
 	text-align: left;
+	font-size: 1em;
+	line-height: 1em;
 }
 .log-message:hover {
 	background: #ecfaec;
@@ -38,6 +40,10 @@ html, body {
 }
 .log-message-time {
 	color: #999;
+	font-size: 0.70em;
+	font-weight: bold;
+	vertical-align: top;
+	text-decoration: underline;
 }
 .log-message-text {
 	font-style: italic;
