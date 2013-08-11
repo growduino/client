@@ -1,6 +1,12 @@
 // Visual logger
-define(['util/mx-conf', 'jquery', 'underscore', 'backbone'], function(configurable){
-//	console.log(configurable);
+define(['jquery', 'underscore', 'backbone'], function(){
+
+	var configurable = require('util/mx-conf');
+
+	var MessageModel = Backbone.Model.extend();
+	var MessageList  = Backbone.Collection.extend({
+		model: MessageModel
+	});
 
 	/** @var {Backbone.View} */
 	var exports = {};
@@ -15,7 +21,8 @@ define(['util/mx-conf', 'jquery', 'underscore', 'backbone'], function(configurab
 			messageTemplate: ''	// html string for _
 		};
 
-		exports.messages = [];
+		/** @var {Backbone.Collection} */
+		exports.messages = new MessageList();
 
 		/**
 		 * @param  {Object} $el
@@ -23,7 +30,7 @@ define(['util/mx-conf', 'jquery', 'underscore', 'backbone'], function(configurab
 		 * @return {Backbone.View} fluent
 		 */
 		exports.start = function($el, options) {
-			this.$el = $el;
+			this.$el = $el || $('#log');
 			this.config(options || {});
 
 			var $messageTemplate = $(this.$el.find('.log-message.template').detach());
@@ -44,31 +51,38 @@ define(['util/mx-conf', 'jquery', 'underscore', 'backbone'], function(configurab
 		 * @return {Object} fluent
 		 */
 		exports.show = function(text, type){
-			type = type || 'info';
+			if (_.isEmpty(text)) {
+				throw 'Invalid argument: text must not be empty';
+			}
+
+			// create message
+			var date = new Date();
+			var time = date.getHours() + ':' + date.getMinutes() + ':' + date.getSeconds();
+			var id = 'log-message-'.concat(this.messages.size() + 1);
+
+			var data = new MessageModel({
+				'time': time,
+				'text': text,
+				'id': id
+			});
+
+			this.messages.add(data);
 
 			// append message using template
 			var template = _.template(this.options['messageTemplate']);
-			var date = new Date();
-			var time = date.getHours() + ':' + date.getMinutes() + ':' + date.getSeconds();
-
-			var data = {
-				'time': time,
-				'text': text
-			};
-
-			this.messages.push(data);
-
-			var message = $(template(data))
-				.addClass(type)
+			var message = $(template(data.toJSON()))
+				.addClass(type || this.INFO)
 				.hide();
 
-			this.$el.append(message);
+			this.$el.prepend(message);
 
-							message.show('slow');
+							 message.show('slow');
 
 			// remove off-limit messages
 			while (this.$el.find('.log-message').size() > this.options['messageCount']) {
-				this.$el.find('.log-message:first').remove();
+				this.$el.find('.log-message:last').remove();
+
+				// @todo remove from internal list too?
 			}
 
 			return this;
@@ -83,12 +97,15 @@ define(['util/mx-conf', 'jquery', 'underscore', 'backbone'], function(configurab
 			return this;
 		};
 
+
 	var logConfigurable = _.extend(configurable, exports);
 //		console.log(logConfigurable);
 
+	var logView = Backbone.View.extend(logConfigurable);
+//		console.log(logView);
 
 	// Enhanced view
-	return _.extend(Backbone.View.extend({}), logConfigurable);
+	return new logView();
 });
 
 

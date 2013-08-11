@@ -1,39 +1,37 @@
 // Application bootstrap file
 // - Growduino Client v 0.1 -
 
-define(['view/log'], function(Log){
+
+define(['view/log', 'util/mx-conf', 'util/mx-persist'],
+/** @param {Object} Log Visual logger view */
+function(Log, Configurable, Persistable){
 	var exports = {};
 
 		exports.VERSION = '0.1';
-		exports.NAME = 'ArduinoClient';
-
-		exports.options = {};
+		exports.NAME = 'GrowduinoClient';
 
 		/**
-		 * @param {Object} options
+		 * @param {Object} options (mx-conf)
 		 * @return fluent
 		 */
-		exports.config = function(options){
-			options = options || {};
+		exports.init = function(options){
+			this.config(options || {});
 
-			for (var i in options) {
-				this.options[i] = options[i];
-			}
-
-			return this;
-		};
-
-		/**
-		 * @return fluent
-		 */
-		exports.init = function($el){
-			$el = $el || $('#log');
-
-			Log.start($el);
+			Log.start();
 			Log.show(this.NAME + ' ' + this.VERSION + ' starting..');
 
+			var cache = _.extend({}, Persistable);
+				cache.setStore('app-cache');
+				// test
+//				cache.save('foo', {name:'John'});
+//				console.log(cache.load('foo'));
+//				console.log(cache.load('bar'));
+
 			return this;
 		};
 
-	return exports;
+
+		var appConfigurable = _.extend(Configurable, exports);
+
+	return appConfigurable;
 });
