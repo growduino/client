@@ -1,11 +1,9 @@
 // Graphing component
-define(['util/mx-conf', 'jquery', 'underscore', 'backbone'], function(configurable){
-
-	console.log(configurable);
+define(['util/mx-conf', 'util/mx-persist', 'underscore', 'backbone'], function(Configurable, Persistable){
 
 	var exports = {};
 
-		exports.NAME = 'Graph';
+		exports.NAME = 'Graph View';
 
 
 		exports.start = function($el, options){
@@ -17,9 +15,16 @@ define(['util/mx-conf', 'jquery', 'underscore', 'backbone'], function(configurab
 			return this;
 		};
 
-	var graphConfigurable = _.extend(configurable, exports);
 
-	// Base graph (configurable)
-	return _.extend(Backbone.View.extend({}), graphConfigurable);
+	Configurable._check(exports);
+	Persistable._check(exports);
+
+	var graphConfigurable = _.extend(Configurable, exports);
+	var graphPersistable =  _.extend(Persistable, graphConfigurable);
+
+	var GraphView = Backbone.View.extend(graphPersistable);
+
+	// Base graph (configurable|persistable)
+	return new GraphView();
 });
 

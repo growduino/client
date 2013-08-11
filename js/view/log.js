@@ -1,7 +1,5 @@
 // Visual logger
-define(['jquery', 'underscore', 'backbone'], function(){
-
-	var configurable = require('util/mx-conf');
+define(['util/mx-conf', 'jquery', 'underscore', 'backbone'], function(Configurable){
 
 	var MessageModel = Backbone.Model.extend();
 	var MessageList  = Backbone.Collection.extend({
@@ -98,14 +96,16 @@ define(['jquery', 'underscore', 'backbone'], function(){
 		};
 
 
-	var logConfigurable = _.extend(configurable, exports);
+		Configurable._check(exports);
+
+	var logConfigurable = _.extend(Configurable, exports);
 //		console.log(logConfigurable);
 
-	var logView = Backbone.View.extend(logConfigurable);
-//		console.log(logView);
+	var LogView = Backbone.View.extend(logConfigurable);
+//		console.log(LogView);
 
-	// Enhanced view
-	return new logView();
+	// Loger (configurable)
+	return new LogView();
 });
 
 

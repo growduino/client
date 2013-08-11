@@ -1,7 +1,8 @@
 /** Configurable (mixin)
  *  Provides "options" property and associated methods.
  */
-define(['underscore'], function(){
+define(['util/mx-base', 'underscore'], function(Base){
+
 	var exports = {};
 
 		exports.options = {};
@@ -57,7 +58,6 @@ define(['underscore'], function(){
 			return this;
 		};
 
-
-	return exports;
+		return _.extend(Base, exports);
 });
 

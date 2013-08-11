@@ -3,7 +3,7 @@
  *  Provides simple localStorage API.
  *  For "null or falsy" data items use Configurable mixin.
  */
-define(['underscore', 'backbone', 'localstorage'], function(){
+define(['util/mx-base', 'underscore', 'backbone', 'localstorage'], function(Base){
 	var exports = {};
 
 		/** @var {Backbone.LocalStorage} */
@@ -79,5 +79,5 @@ define(['underscore', 'backbone', 'localstorage'], function(){
 		}
 
 
-	return exports;
+	return _.extend(Base, exports);
 });
