@@ -1,44 +1,52 @@
 // Visual logger
 define(['util/mx-conf', 'jquery', 'underscore', 'backbone'], function(Configurable){
 
+//	console.log(Configurable);
+
 	var MessageModel = Backbone.Model.extend();
 	var MessageList  = Backbone.Collection.extend({
 		model: MessageModel
 	});
 
 	/** @var {Backbone.View} */
-	var exports = {};
+	var Logger = function(name)
+	{
+		this.NAME = name || 'Logger';
 
-		exports.NAME = 'Logger';
+		this.INFO = 'info';
+		this.ERROR = 'error';
 
-		exports.INFO = 'info';
-		exports.ERROR = 'error';
-
-		exports.options = {
+		this.defaultOptions = {
 			messageCount: 5,
-			messageTemplate: ''	// html string for _
+			templateSelector: '#log-message'
 		};
 
+		/** @var {String} */
+		this.messageTemplate = '';	// loaded from html script template
+
 		/** @var {Backbone.Collection} */
-		exports.messages = new MessageList();
+		this.messages = new MessageList();
 
 		/**
 		 * @param  {Object} $el
 		 * @param  {Object} options [optional] #configurable mixin
 		 * @return {Backbone.View} fluent
 		 */
-		exports.start = function($el, options) {
+		this.start = function($el, options) {
 			this.$el = $el || $('#log');
-			this.config(options || {});
+			this.config(_.extend(this.defaultOptions, options || {}));
 
-			var $messageTemplate = $(this.$el.find('.log-message.template').detach());
-				$messageTemplate.removeClass('template');
+			var templateSelector = this.option('templateSelector');
+			var $messageTemplate = $(templateSelector);
 
 			if ($messageTemplate.size() === 0) {
-				throw 'Message template not found!';
+				throw 'Message template [@name] not found!'
+					.replace('@name', templateSelector);
 			}
 
-			this.options.messageTemplate = $messageTemplate.prop('outerHTML');	// olol
+			$messageTemplate.find('.log-message').removeClass('template');
+
+			this.messageTemplate = $messageTemplate.html();
 
 			return this;
 		};
@@ -48,7 +56,7 @@ define(['util/mx-conf', 'jquery', 'underscore', 'backbone'], function(Configurab
 		 * @param  {String} type [optional]
 		 * @return {Object} fluent
 		 */
-		exports.show = function(text, type){
+		this.show = function(text, type){
 			if (_.isEmpty(text)) {
 				throw 'Invalid argument: text must not be empty';
 			}
@@ -67,7 +75,7 @@ define(['util/mx-conf', 'jquery', 'underscore', 'backbone'], function(Configurab
 			this.messages.add(data);
 
 			// append message using template
-			var template = _.template(this.options['messageTemplate']);
+			var template = _.template(this.messageTemplate);
 			var message = $(template(data.toJSON()))
 				.addClass(type || this.INFO)
 				.hide();
@@ -89,23 +97,20 @@ define(['util/mx-conf', 'jquery', 'underscore', 'backbone'], function(Configurab
 		/**
 		 * @return fluent
 		 */
-		exports.clear = function(){
+		this.clear = function(){
 			this.$el.empty();
 
 			return this;
 		};
+	};
 
+	Configurable._check(Logger);
 
-		Configurable._check(exports);
-
-	var logConfigurable = _.extend(Configurable, exports);
+	var logConfigurable = _.extend(new Logger(), Configurable);
 //		console.log(logConfigurable);
 
-	var LogView = Backbone.View.extend(logConfigurable);
-//		console.log(LogView);
-
-	// Loger (configurable)
-	return new LogView();
+	// Logger View (configurable)
+	return Backbone.View.extend(logConfigurable);
 });
 
 

@@ -14,10 +14,10 @@ require.config({
 			exports: '$'
 		},
 		'underscore': {
-            exports: '_',
 			init: function(){
 				this._.templateSettings = {interpolate : /\{(.+?)\}/g};
-			}
+			},
+            exports: '_'
         },
         'backbone': {
             deps: ['underscore', 'jquery'],
@@ -28,5 +28,8 @@ require.config({
 
 // Run application!
 require(['app'], function(App){
+
+	//console.log(App);
+
 	App.init();
 });

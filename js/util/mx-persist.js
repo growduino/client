@@ -4,18 +4,17 @@
  *  For "null or falsy" data items use Configurable mixin.
  */
 define(['util/mx-base', 'underscore', 'backbone', 'localstorage'], function(Base){
-	var exports = {};
-
+	var Persistable = function(){
 		/** @var {Backbone.LocalStorage} */
-		exports.storage = null;
+		this.storage = null;
 		/** @var {String} */
-		exports.storageName = null;
+		this.storageName = null;
 
 		/**
 		 * @param {String} name
 		 * @return {Object} fluent
 		 */
-		exports.getStore = function(name)
+		this.getStore = function(name)
 		{
 			if (_.isEmpty(this.storage)) {
 				throw 'Invalid state: Storage is not set for the entity. Use this.setStore(name) instead.';
@@ -28,7 +27,7 @@ define(['util/mx-base', 'underscore', 'backbone', 'localstorage'], function(Base
 		 * @param {String} name
 		 * @return {Backnone.LocalStorage}
 		 */
-		exports.setStore = function(name) {
+		this.setStore = function(name) {
 			if (!_.isString(name)) {
 				throw 'Invalid argument: storage name must be a string.';
 			}
@@ -40,7 +39,7 @@ define(['util/mx-base', 'underscore', 'backbone', 'localstorage'], function(Base
 		/**
 		 * Storage item setter.
 		 */
-		exports.save = function(key, data) {
+		this.save = function(key, data) {
 			if (!_.isString(key)) {
 				throw 'Invalid argument: key must be a string.';
 			}
@@ -59,7 +58,7 @@ define(['util/mx-base', 'underscore', 'backbone', 'localstorage'], function(Base
 		 * @param {Object} def [optional]
 		 * @return {Object|null}
 		 */
-		exports.load = function(key, def) {
+		this.load = function(key, def) {
 			if (!_.isString(key)) {
 				throw 'Invalid argument: key must be a string.';
 			}
@@ -77,7 +76,8 @@ define(['util/mx-base', 'underscore', 'backbone', 'localstorage'], function(Base
 
 			return null;
 		}
+	};
 
 
-	return _.extend(Base, exports);
+	return _.extend(new Persistable(), Base);
 });

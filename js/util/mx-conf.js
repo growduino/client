@@ -3,9 +3,8 @@
  */
 define(['util/mx-base', 'underscore'], function(Base){
 
-	var exports = {};
-
-		exports.options = {};
+	var Configurable = function(){
+		this.options = {};
 
 		/**
 		 * Option getter.
@@ -13,7 +12,7 @@ define(['util/mx-base', 'underscore'], function(Base){
 		 * @param {String|Object} key
 		 * @param {Object} def [optional]
 		 */
-		exports.option = function(key, def) {
+		this.option = function(key, def) {
 
 			if (!_.isString(key)) {
 				throw 'Invalid argument: "key" must be string';
@@ -29,7 +28,7 @@ define(['util/mx-base', 'underscore'], function(Base){
 		 * @param  {Object} vals [optional]
 		 * @return {Object} fluent
 		 */
-		exports.config = function(keys, vals) {
+		this.config = function(keys, vals) {
 			vals = vals || null;
 
 			var option, value;
@@ -57,7 +56,9 @@ define(['util/mx-base', 'underscore'], function(Base){
 
 			return this;
 		};
+	};
 
-		return _.extend(Base, exports);
+
+	return _.extend(new Configurable(), Base);
 });
 

@@ -1,30 +1,59 @@
 // Graphing component
-define(['util/mx-conf', 'util/mx-persist', 'underscore', 'backbone'], function(Configurable, Persistable){
+define(['util/mx-conf', 'util/mx-persist', 'underscore', 'backbone'/*, dygraph*/],
+function(Configurable,	Persistable){
 
-	var exports = {};
+//	console.log(Configurable);
+//	console.log(Persistable);
 
-		exports.NAME = 'Graph View';
+	var Graph = function(){
+		this.NAME = 'Graph';
 
+		this.data = {};
+		this.defaultOptions = {
+			'styles': {
+				'wrapper' : {
 
-		exports.start = function($el, options){
+				}
+			}
+		}
+
+		this.start = function($el, options){
 			this.$el = $el;
-			this.config(options || {});
+			this.config(_.extend(this.defaultOptions, options || {}));
 
-			console.log('Graph view started..');
+			// console.log('Graph view started..');
 
 			return this;
 		};
 
+		this.setData = function(data){
+			if (!_.isObject(data)) {
+				throw 'Invalid argument: data has to be an object';
+			}
 
-	Configurable._check(exports);
-	Persistable._check(exports);
+			this.data = data;
 
-	var graphConfigurable = _.extend(Configurable, exports);
-	var graphPersistable =  _.extend(Persistable, graphConfigurable);
+			return this;
+		};
 
-	var GraphView = Backbone.View.extend(graphPersistable);
+		this.draw = function(){
+			this.$el.css(this.option('styles').wrapper);
+			this.$el.show();
 
-	// Base graph (configurable|persistable)
-	return new GraphView();
+			// draw graph..
+
+			return this.$el;
+		};
+	};
+
+
+	Configurable._check(Graph);
+	Persistable._check(Graph);
+
+	var graph = _.extend(new Graph(), Configurable);
+		graph =  _.extend(graph, Persistable);
+
+	// GraphView (configurable|persistable)
+	return Backbone.View.extend(graph);
 });
 
