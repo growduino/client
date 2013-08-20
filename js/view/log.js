@@ -21,6 +21,8 @@ define(['util/mx-conf', 'jquery', 'underscore', 'backbone'], function(Configurab
 			templateSelector: '#log-message'
 		};
 
+		this.started = false;
+
 		/** @var {String} */
 		this.messageTemplate = '';	// loaded from html script template
 
@@ -43,8 +45,6 @@ define(['util/mx-conf', 'jquery', 'underscore', 'backbone'], function(Configurab
 				throw 'Message template [@name] not found!'
 					.replace('@name', templateSelector);
 			}
-
-			$messageTemplate.find('.log-message').removeClass('template');
 
 			this.messageTemplate = $messageTemplate.html();
 
@@ -76,13 +76,14 @@ define(['util/mx-conf', 'jquery', 'underscore', 'backbone'], function(Configurab
 
 			// append message using template
 			var template = _.template(this.messageTemplate);
-			var message = $(template(data.toJSON()))
+			var $message = $(template(data.toJSON()))
+				.removeClass('template')
 				.addClass(type || this.INFO)
 				.hide();
 
-			this.$el.prepend(message);
+			this.$el.prepend($message);
 
-							 message.show('slow');
+				$message.show('slow');
 
 			// remove off-limit messages
 			while (this.$el.find('.log-message').size() > this.options['messageCount']) {

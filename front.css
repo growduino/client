@@ -16,6 +16,28 @@ html, body {
 	background: beige;
 }
 
+.graph {
+	float:left;
+	margin: 25px 0 0 25px;
+	border: 1px solid #999;
+}
+.graph.full {
+	width: 933px;
+}
+.graph.half {
+	width: 451px;
+}
+.graph.thir {
+	width: 289px;
+}
+
+.graph-title {
+	font-weight: bold;
+	font-size: 125%;
+}
+.graph-body {}
+.graph-controls {}
+
 #log {
 	margin: 25px auto;
 	width: 960px;
@@ -51,4 +73,8 @@ html, body {
 
 .template {
 	display: none;
+}
+
+.clr {
+	clear: both;
 }

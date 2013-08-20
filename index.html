@@ -8,15 +8,30 @@
 		<script type="application/javascript" src="js/lib/require.js" data-main="setup"></script>
 	</head>
 	<body class="layout">
+		<div id="top">
+		</div>
 		<div id="main">
-
+			<div class="clr">&nbsp;</div>
 		</div>
 
 		<div id="log">
+		</div>
+
+		<!-- templates -->
+		<script type="text/html" id="graph">
+		<div class="graph template" id="{id}">
+			<div class="graph-title">{title}</div>
+			<div class="graph-body"></div>
+			<div class="graph-controls"></div>
+		</div>
+		</script>
+
+		<script type="text/html" id="log-message">
 			<div class="log-message template" id="{id}">
 				<span class="log-message-time">{time}</span>
 				<span class="log-message-text">{text}</span>
 			</div>
-		</div>
+		</script>
+		<!-- /templates -->
 	</body>
 </html>

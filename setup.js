@@ -7,7 +7,8 @@ require.config({
 		'jquery':		'lib/jquery',
 		'underscore':	'lib/underscore',
 		'backbone':		'lib/backbone',
-		'localstorage': 'lib/backbone.localStorage'
+		'localstorage': 'lib/backbone.localStorage',
+		'dygraph':		'lib/dygraph'
 	},
 	shim: {
 		'jquery': {
@@ -22,7 +23,10 @@ require.config({
         'backbone': {
             deps: ['underscore', 'jquery'],
 			exports: 'Backbone'
-        }
+        },
+		'dygraph': {
+			exports: 'Dygraph'
+		}
 	}
 });
 
