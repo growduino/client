@@ -5,16 +5,19 @@
  */
 define(['util/mx-base', 'underscore', 'backbone', 'localstorage'], function(Base){
 	var Persistable = function(){
+
 		/** @var {Backbone.LocalStorage} */
 		this.storage = null;
 		/** @var {String} */
 		this.storageName = null;
 
+
 		/**
-		 * @param {String} name
-		 * @return {Object} fluent
+		 * Storage getter.
+		 *
+		 * @return {Backbone.LocalStorage} storage
 		 */
-		this.getStore = function(name)
+		this.getStore = function()
 		{
 			if (_.isEmpty(this.storage)) {
 				throw 'Invalid state: Storage is not set for the entity. Use this.setStore(name) instead.';
@@ -24,8 +27,10 @@ define(['util/mx-base', 'underscore', 'backbone', 'localstorage'], function(Base
 		};
 
 		/**
+		 * Storage setter.
+		 *
 		 * @param {String} name
-		 * @return {Backnone.LocalStorage}
+		 * @return {Object} fluent
 		 */
 		this.setStore = function(name) {
 			if (!_.isString(name)) {
@@ -34,18 +39,29 @@ define(['util/mx-base', 'underscore', 'backbone', 'localstorage'], function(Base
 
 			this.storageName = name;
 			this.storage = new Backbone.LocalStorage(name);
+
+			return this;
 		}
 
 		/**
 		 * Storage item setter.
+		 *
+		 * @param {String} key
+		 * @param {Object} data
+		 * @param {Function} serializer [optional]
+		 * @return {Object} fluent
+		 *
 		 */
-		this.save = function(key, data) {
+		this.save = function(key, data, serializer) {
 			if (!_.isString(key)) {
 				throw 'Invalid argument: key must be a string.';
 			}
 
 			if (!_.isEmpty(data)) {
-				var storage = this.getStore(this.storageName).localStorage();
+				if (_.isFunction(serializer)) {
+					data = serializer(data);
+				}
+				var storage = this.getStore().localStorage();
 					storage.setItem(key, JSON.stringify(data));
 			}
 
@@ -54,24 +70,26 @@ define(['util/mx-base', 'underscore', 'backbone', 'localstorage'], function(Base
 
 		/**
 		 * Storage item getter.
+		 *
 		 * @param {String} key
-		 * @param {Object} def [optional]
+		 * @param {Function} deserializer [optional]
 		 * @return {Object|null}
 		 */
-		this.load = function(key, def) {
+		this.load = function(key, deserializer) {
 			if (!_.isString(key)) {
 				throw 'Invalid argument: key must be a string.';
 			}
 
-			var storage = this.getStore(this.storageName).localStorage();
+			var storage = this.getStore().localStorage();
 			var data = storage.getItem(key);
 
 			if (!_.isEmpty(data)) {
-				return JSON.parse(data);
-			}
+				data = JSON.parse(data);
+				if (_.isFunction(deserializer)) {
+					data = deserializer(data);
+				}
 
-			if (!_.isUndefined(def)) {
-				return def;
+				return data;
 			}
 
 			return null;

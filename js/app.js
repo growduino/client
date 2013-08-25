@@ -64,16 +64,32 @@ function(Configurable, Persistable, Log, Graph){
 				);
 
 					data = finalData;
-					cache.save('data', data);
+					cache.save('data', finalData, function(data){
+						var serialized = [];
+
+						$(data).each(function(k, v){
+							v[0] = v[0].getTime();
+							serialized[k] = v;
+						});
+
+						return serialized;
+					});
 
 					logger.show('Loaded fresh data');
 			})
 			.fail(function() {
-				var finalData = cache.load('data');
+				var finalData = cache.load('data', function(data){
+					var deserialized = [];
+
+					$(data).each(function(k, v){
+						v[0] = new Date(v[0]);
+						deserialized[k] = v;
+					});
+
+					return deserialized;
+				});
 				if (finalData) {
 					data = finalData;
-
-					console.log(data);
 
 					logger.show('Loaded cached data');
 				}
