@@ -64,12 +64,14 @@ function(Configurable, Persistable, Log, Graph){
 				);
 
 					data = finalData;
-					cache.save('data', finalData, function(data){
+					cache.save('data', finalData, function(items){
 						var serialized = [];
+						var item;
 
-						$(data).each(function(k, v){
-							v[0] = v[0].getTime();
-							serialized[k] = v;
+						$(items).each(function(k, v){
+							item = _.clone(v);
+							item[0] = v[0].toString();
+							serialized[k] = item;
 						});
 
 						return serialized;
@@ -80,10 +82,12 @@ function(Configurable, Persistable, Log, Graph){
 			.fail(function() {
 				var finalData = cache.load('data', function(data){
 					var deserialized = [];
+					var item;
 
 					$(data).each(function(k, v){
-						v[0] = new Date(v[0]);
-						deserialized[k] = v;
+						item = v;
+						item[0] = new Date(v[0]);
+						deserialized[k] = item;
 					});
 
 					return deserialized;
@@ -172,10 +176,7 @@ function(Configurable, Persistable, Log, Graph){
 					x = sanitizer(x);
 				}
 
-				var date = new Date();
-					date.setYear(baseDate.getYear());
-					date.setMonth(baseDate.getMonth());
-					date.setDate(baseDate.getDay());
+				var date = new Date(baseDate.toString())
 					date.setHours(hourCount);
 					date.setMinutes(minsCount);
 					date.setSeconds(0);

@@ -58,11 +58,8 @@ define(['util/mx-base', 'underscore', 'backbone', 'localstorage'], function(Base
 			}
 
 			if (!_.isEmpty(data)) {
-				if (_.isFunction(serializer)) {
-					data = serializer(data);
-				}
 				var storage = this.getStore().localStorage();
-					storage.setItem(key, JSON.stringify(data));
+					storage.setItem(key, JSON.stringify(_.isFunction(serializer) ? serializer(data) : data));
 			}
 
 			return this;
