@@ -78,3 +78,8 @@ html, body {
 .clr {
 	clear: both;
 }
+
+/* graphs */
+.dygraph-legend {
+	width: 100%;
+}

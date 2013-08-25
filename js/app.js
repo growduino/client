@@ -1,76 +1,211 @@
 // Application bootstrap file
-// - Growduino Client v 0.1 -
+// - Growduino Client v 0.2 -
 
 
-define(['util/mx-conf', 'util/mx-persist', 'view/graph', 'view/log'],
-function(Configurable, Persistable, Graph, Log){
+define(['util/mx-conf', 'util/mx-persist', 'view/log', 'view/graph'],
+function(Configurable, Persistable, Log, Graph){
 
 	var App = {};
 
-		App.VERSION = '0.1';
+		App.VERSION = '0.2';
 		App.NAME = 'GrowduinoClientApp';
+
+		App.defaultOptions = {
+			cacheNamespace: 'app-cache'
+		};
+
 
 		/**
 		 * @param {Object} options (mx-conf)
 		 * @return fluent
 		 */
 		App.init = function(options){
-			this.config(options || {});
+			this.config(_.extend(this.defaultOptions, options || {}));
 
+			// logging
 			var logger = new Log();
 				if (!logger.started) logger.start();
-				logger.show(this.NAME + ' ' + this.VERSION + ' starting..');
+				logger.show(this.NAME + ' ' + this.VERSION + ' started..');
 
-//			var cache = _.extend({}, Persistable);
-//				cache.setStore('app-cache');
-//				// test
-//				cache.save('foo', {name:'John'});
-//				console.log(cache.load('foo'));
-//				console.log(cache.load('bar'));
-//
-//			// make some graphs
-			var graph1 = new Graph();
-				graph1.start($('#main'), {
-					'title': 'Temperature+Humidity+Light'
-				});
-				// test data
-				graph1.setData([
-					// date, series1, series2, ...
-					[new Date("2013/08/20 16:30"),22.5,38.0,-1],
-					[new Date("2013/08/20 16:31"),22.7,38.0,-1],
-					[new Date("2013/08/20 16:32"),22.7,38.0,-1],
-					[new Date("2013/08/20 16:33"),22.6,38.0,-1],
-					[new Date("2013/08/20 16:34"),22.7,38.5,-1],
-					[new Date("2013/08/20 16:35"),22.5,38.5,-1],
-					[new Date("2013/08/20 16:36"),23.4,38.7,100],
-					[new Date("2013/08/20 16:37"),23.9,39.2,100],
-					[new Date("2013/08/20 16:38"),24.8,39.8,100],
-					[new Date("2013/08/20 16:39"),26.1,40.3,100],
-					[new Date("2013/08/20 16:40"),26.9,40.5,100],
-					[new Date("2013/08/20 16:40"),27.2,40.5,100],
-					[new Date("2013/08/20 16:42"),27.0,40.6,100],
-					[new Date("2013/08/20 16:43"),27.0,40.6,100],
-					[new Date("2013/08/20 16:44"),27.0,40.5,100],
-				], {
-					labels: [ "time", "TMP", "HUM", "LIGHT" ]
-				});
-				graph1.draw();
+			// caching
+			var cache = _.extend({}, Persistable);
+				cache.setStore(this.option('cacheNamespace'));
 
-				// load data
-//				$.ajax({
-//					url: 'data/light_sensor.json',
-//					dataType: 'json',
-//					success: function(response){
-//						console.log('Success:');
-//						console.log(response);
-//					},
-//					error: function(response) {
-//						console.log('Error:');
-//						console.log(response);
-//					}
-//				});
+			var data = null;
+
+			// load data
+			var self = this;
+			$.when(
+				$.ajax({
+					url: 'data/temperature.jso',
+					dataType: 'json'
+				}),
+				$.ajax({
+					url: 'data/humidity.jso',
+					dataType: 'json'
+				}),
+				$.ajax({
+					url: 'data/light.jso',
+					dataType: 'json'
+				})
+			)
+			.done(function(temperature, humidity, light){
+//				console.log(temperature);
+//				console.log(humidity);
+//				console.log(light);
+
+				// @todo set real date
+				var baseDate = new Date();
+
+				var finalData = self.getCombinedData(
+					self.getLightData(light[0].min, baseDate),
+					self.getTemperatureData(temperature[0].min, baseDate),
+					self.getHumidityData(humidity[0].min, baseDate)
+				);
+
+					data = finalData;
+					cache.save('data', data);
+
+					logger.show('Loaded fresh data');
+			})
+			.fail(function() {
+				var finalData = cache.load('data');
+				if (finalData) {
+					data = finalData;
+
+					console.log(data);
+
+					logger.show('Loaded cached data');
+				}
+			})
+			.always(function(){
+				var finalData = data;
+
+				var graph = new Graph();
+					graph.start($('#main'), {
+						'title': 'Light+Temp+Hum'
+					});
+					graph.setData(finalData, {
+						labels: ["time",	"LIGHT",	"TEMP",		"HUM"],
+						colors: [			"yellow",	"green",	"blue"],
+						fillGraph: true
+					});
+					graph.draw();
+			});
 
 			return this;
+		};
+
+		/**
+		 * @param {Array} rawData
+		 * @param {Date} baseDate
+		 * @return {Array}
+		 */
+		App.getLightData = function(rawData, baseDate){
+			return this.getDataSeries(rawData, baseDate, function(val){
+				// sanitizer
+				return (val === -999) ? 0 : 100;
+			});
+		};
+
+		/**
+		 * @param {Array} rawData
+		 * @param {Date} baseDate
+		 * @return {Array}
+		 */
+		App.getTemperatureData = function(rawData, baseDate){
+			return this.getDataSeries(rawData, baseDate, function(val){
+				// sanitizer
+				return (val < 0) ? 0 : val / 10;
+			});
+		};
+
+		/**
+		 * @param {Array} rawData
+		 * @param {Date} baseDate
+		 * @return {Array}
+		 */
+		App.getHumidityData = function(rawData, baseDate){
+			return this.getDataSeries(rawData, baseDate, function(val){
+				// sanitizer
+				return (val < 0) ? 0 : val / 10;
+			});
+		};
+
+		/**
+		 * @param {Array} rawData
+		 * @param {Date} baseDate
+		 * @param {Function} sanitizer
+		 * @return {Array}
+		 */
+		App.getDataSeries = function(rawData, baseDate, sanitizer){
+			var series = [];
+			var minsCount = 1;
+			var hourCount = 0;
+
+			$(rawData).each(function(i, x){
+				if ((i + 1) % 60 === 0) {
+					minsCount = 1;
+					hourCount++;
+				} else {
+					minsCount++;
+				}
+
+				// sanitize
+				if (_.isFunction(sanitizer)) {
+					x = sanitizer(x);
+				}
+
+				var date = new Date();
+					date.setYear(baseDate.getYear());
+					date.setMonth(baseDate.getMonth());
+					date.setDate(baseDate.getDay());
+					date.setHours(hourCount);
+					date.setMinutes(minsCount);
+					date.setSeconds(0);
+					date.setMilliseconds(0);
+
+				series.push([date, x]);
+			});
+
+			return series;
+		};
+
+		/**
+		 * @return {Array}
+		 */
+		App.getCombinedData = function(/*arguments*/){
+			var series = [];
+			var length = arguments.length;
+			var found, item;
+
+			$(arguments).each(function(ai, ax){
+				// data series: tempData
+				$(ax).each(function(di, dx){
+					// data series items: [date, value]
+					if (!dx[0]) return;
+
+					found = false;
+					$(series).each(function(si, sx){
+						// final series items: [date, value, ...]
+						if (sx[0].getTime() === dx[0].getTime()) {
+							found = true;
+							sx[ai + 1] = dx[1];
+						}
+					});
+					if (!found) {
+						item = _.range(length + 1);
+						item = _.map(item, function(){
+							return 0;
+						});
+						item[0] = dx[0];
+						item[ai + 1] = dx[1];
+						series.push(item);
+					}
+				});
+			});
+
+			return series;
 		};
 
 
