@@ -19,7 +19,7 @@ function(Configurable, Persistable, Log, Graph){
 		 * @return fluent
 		 */
 		App.init = function(options){
-			this.config(_.extend(this.defaultOptions, options || {}));
+			this.config(_.defaults(options || {}, this.defaultOptions));
 
 			// logging
 			this.logger = new Log();
@@ -33,7 +33,7 @@ function(Configurable, Persistable, Log, Graph){
 			// load default data
 			var sources = [
 				$.ajax({
-					url: 'data/temperature.jso',
+					url: 'data/temp1.jso',
 					dataType: 'json'
 				}),
 				$.ajax({
@@ -66,11 +66,14 @@ function(Configurable, Persistable, Log, Graph){
 			this.dataTypes = _.keys(settings);
 			this.dataColors = _.values(settings);
 
-			$.when
-				.apply(this, sources)
+			var self = this;
+
+			$.when.apply(this, sources)
 				.done($.proxy(this.onDataLoaded, this))
 				.fail($.proxy(this.onDataFailed, this))
-				.always($.proxy(this.showData, this));
+				.always(function(){
+					self.showData.call(self);
+				});
 
 			return this;
 		};
@@ -88,7 +91,6 @@ function(Configurable, Persistable, Log, Graph){
 			$(arguments).each(function(i, x){
 				series.push(self['get' + self.dataTypes[i] + 'Data'](x[0].min, baseDate));
 			});
-
 
 			this.data = this.getCombinedData.apply(this, series);
 
@@ -133,27 +135,92 @@ function(Configurable, Persistable, Log, Graph){
 		/**
 		 * Data visualization.
 		 */
-		App.showData = function(){
-			var graph = new Graph();
-				graph.start($('#main'), {
-					'title': this.dataTypes.join('-')
-				});
+		App.showData = function(graph){
+			var graph = graph || new Graph();
+			if (!graph.started) {
+				graph.start($('#main'));
+			}
+				graph.option('title', this.dataTypes.join('-'));
 
 				this.dataTypes.unshift("Time");
 
 				graph.setData(this.data, {
-					labels:  ["time", "Temperature", "Humidity", "Light"],
+					labels:  this.dataTypes,
 					colors: this.dataColors,
 					fillGraph: true
 				});
 				graph.draw();
 
+				var self = this;	// App
+
 				// controls
+				graph.$el.off();
 				graph.$el.on('submit', 'form', function(evt){
 					evt.preventDefault();
 
 					var $form = $(this);
-					console.log($form.serializeArray());
+					var vals = $form.serializeArray();
+					var date = _.last(vals);
+
+					// @todo remove after rename data folders
+					var dataName = function(x){
+						if (x.match('humidity')) return 'Humidity';
+						if (x.match('light')) return 'Light';
+						if (x.match('temp1')) return 'Temperature';
+
+						return x;
+					}
+
+					var d = date.value.split('/'),
+						baseDate = new Date(),
+						dayDate;
+					var dataTypes = [];
+					var dayData = {};
+
+					var path = 'data/';
+					var name;
+
+					var pass = false;
+
+					$(_.initial(vals)).each(function(i, x){
+						if (x.value.match('on')) {
+							name = dataName(x.name);
+							dayData[name] = [];
+							dataTypes.push(name);
+
+							$(_.range(24)).each(function(i, hour){
+								$.when($.ajax({
+									url: path.concat(x.name, '/', date.value, '/', hour, '.jso'),
+									dataType: 'json',
+									async: false
+								}))
+								.done(function(data){
+									pass = true;
+									dayDate = new Date(baseDate.toString());
+									dayDate.setYear(d[0]);
+									dayDate.setMonth(d[1]);
+									dayDate.setDate(d[2]);
+									dayDate.setHours(hour)
+
+									$(self['get' + name + 'Data'].call(self, data.min, dayDate)).each(function(i, x) {
+										dayData[name].push(x);
+									});
+								});
+							});
+						}
+					});
+
+					if (!pass) {
+						self.logger.show('No data for this date: ' + date.value, self.logger.WARN);
+						return false;
+					}
+
+					self.dataTypes = dataTypes;
+					self.dataColors = ['blue', 'green', 'yellow'];
+					self.data = self.getCombinedData.apply(self, _.values(dayData));
+					self.showData.call(self, graph);
+
+					return false;
 				});
 		};
 
@@ -209,16 +276,8 @@ function(Configurable, Persistable, Log, Graph){
 		 */
 		App.getDataSeries = function(rawData, baseDate, sanitizer){
 			var series = [];
-			var minsCount = 1;
-			var hourCount = 0;
 
 			$(rawData).each(function(i, x){
-				if ((i + 1) % 60 === 0) {
-					minsCount = 1;
-					hourCount++;
-				} else {
-					minsCount++;
-				}
 
 				// sanitize
 				if (_.isFunction(sanitizer)) {
@@ -226,8 +285,7 @@ function(Configurable, Persistable, Log, Graph){
 				}
 
 				var date = new Date(baseDate.toString())
-					date.setHours(hourCount);
-					date.setMinutes(minsCount);
+					date.setMinutes(i);
 					date.setSeconds(0);
 					date.setMilliseconds(0);
 

@@ -22,12 +22,11 @@ function(Configurable,	Persistable, Dygraph){
 		this.meta = {};
 		this.plot = null;
 
-		this.graphTemplate = '';
-
 		this.start = function($el, options){
 			this.$el = $el;
-			this.config(_.extend(this.defaultOptions, options || {}));
+			this.config(_.defaults(options || {}, this.defaultOptions));
 
+			// prepare graph template
 			var templateSelector = this.option('templateSelector');
 			var $graphTemplate = $(templateSelector);
 
@@ -36,7 +35,15 @@ function(Configurable,	Persistable, Dygraph){
 					.replace('@name', templateSelector);
 			}
 
-			this.graphTemplate = $graphTemplate.html();
+			var template = _.template($graphTemplate.html());
+			var $graph = $(template({
+				'title': this.option('title'),
+				'id': this.cid
+			})).removeClass('template');
+
+			this.$el.prepend($graph);
+
+			this.started = true;
 
 			return this;
 		};
@@ -57,15 +64,6 @@ function(Configurable,	Persistable, Dygraph){
 		};
 
 		this.draw = function(){
-			// prepare graph template
-			var template = _.template(this.graphTemplate);
-			var $graph = $(template({
-				'title': this.option('title'),
-				'id': this.cid
-			})).removeClass('template');
-
-			this.$el.prepend($graph);
-
 			// draw graph..
 			this.plot = new Dygraph(
 				this.$el.find('#'.concat(this.cid)+' .graph-body').get(0),

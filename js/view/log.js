@@ -14,14 +14,14 @@ define(['util/mx-conf', 'jquery', 'underscore', 'backbone'], function(Configurab
 		this.NAME = name || 'Logger';
 
 		this.INFO = 'info';
+		this.WARN = 'warn';
 		this.ERROR = 'error';
+		this.SYSTEM = 'system';
 
 		this.defaultOptions = {
 			messageCount: 5,
 			templateSelector: '#log-message'
 		};
-
-		this.started = false;
 
 		/** @var {String} */
 		this.messageTemplate = '';	// loaded from html script template
@@ -36,7 +36,7 @@ define(['util/mx-conf', 'jquery', 'underscore', 'backbone'], function(Configurab
 		 */
 		this.start = function($el, options) {
 			this.$el = $el || $('#log');
-			this.config(_.extend(this.defaultOptions, options || {}));
+			this.config(_.defaults(options || {}, this.defaultOptions));
 
 			var templateSelector = this.option('templateSelector');
 			var $messageTemplate = $(templateSelector);
@@ -47,6 +47,7 @@ define(['util/mx-conf', 'jquery', 'underscore', 'backbone'], function(Configurab
 			}
 
 			this.messageTemplate = $messageTemplate.html();
+			this.started = true;
 
 			return this;
 		};
