@@ -1,5 +1,5 @@
 // Graphing component
-define(['util/mx-conf', 'util/mx-persist', 'dygraph', 'underscore', 'backbone', ],
+define(['util/mx-conf', 'util/mx-pers', 'dygraph', 'underscore', 'backbone', ],
 function(Configurable,	Persistable, Dygraph){
 
 //	console.log(Configurable);

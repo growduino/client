@@ -5,9 +5,9 @@ require.config({
 	baseUrl:		'js',
 	paths: {
 		'jquery':		'lib/jquery',
-		'underscore':	'lib/underscore',
+		'underscore':	'lib/uscore',
 		'backbone':		'lib/backbone',
-		'localstorage': 'lib/backbone.localStorage',
+		'localstorage': 'lib/storage',
 		'dygraph':		'lib/dygraph'
 	},
 	shim: {

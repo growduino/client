@@ -2,7 +2,7 @@
 // - Growduino Client v 0.2 -
 
 
-define(['util/mx-conf', 'util/mx-persist', 'view/log', 'view/graph'],
+define(['util/mx-conf', 'util/mx-pers', 'view/log', 'view/graph'],
 function(Configurable, Persistable, Log, Graph){
 
 	var App = {};
