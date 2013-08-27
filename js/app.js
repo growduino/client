@@ -33,15 +33,15 @@ function(Configurable, Persistable, Log, Graph){
 			// load default data
 			var sources = [
 				$.ajax({
-					url: 'data/temp1.jso',
+					url: 'SENSORS/temp1.jso',
 					dataType: 'json'
 				}),
 				$.ajax({
-					url: 'data/humidity.jso',
+					url: 'SENSORS/humidity.jso',
 					dataType: 'json'
 				}),
 				$.ajax({
-					url: 'data/light.jso',
+					url: 'SENSORS/light.jso',
 					dataType: 'json'
 				})
 			];
@@ -138,9 +138,10 @@ function(Configurable, Persistable, Log, Graph){
 		App.showData = function(graph){
 			var graph = graph || new Graph();
 			if (!graph.started) {
-				graph.start($('#main'));
+				graph.start($('#main'), {
+					'title': this.dataTypes.join('-')
+				});
 			}
-				graph.option('title', this.dataTypes.join('-'));
 
 				this.dataTypes.unshift("Time");
 
