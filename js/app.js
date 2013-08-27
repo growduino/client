@@ -150,7 +150,10 @@ function(Configurable, Persistable, Log, Graph){
 					colors: this.dataColors,
 					fillGraph: true
 				});
-				graph.draw();
+				graph.draw({
+					width: 910,
+					height: 380
+				});
 
 				var self = this;	// App
 

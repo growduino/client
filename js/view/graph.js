@@ -63,12 +63,17 @@ function(Configurable,	Persistable, Dygraph){
 			return this;
 		};
 
-		this.draw = function(){
-			// draw graph..
+		/**
+		 * Draws graph.
+		 */
+		this.draw = function(options){
+			var meta = _.defaults(options || {}, this.meta);
+			var data = this.data;
+
 			this.plot = new Dygraph(
 				this.$el.find('#'.concat(this.cid)+' .graph-body').get(0),
-				this.data,
-				this.meta
+				data,
+				meta
 			);
 
 			return this;
