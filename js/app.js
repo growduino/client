@@ -99,12 +99,10 @@ function(Configurable, Persistable, Log, Graph, Form){
 		App.onDataLoaded = function(/*series1, ...*/){
 			var self = this;
 
-			// @todo set real date
-			var baseDate = new Date();
 			var series = [];
 
 			$(arguments).each(function(i, x){
-				series.push(self['get' + self.dataTypes[i] + 'Data'](x[0].min, baseDate));
+				series.push(self['get' + self.dataTypes[i] + 'Data'](x[0].min, new Date(parseInt(x[0].time))));
 			});
 
 			this.data = this.getCombinedData.apply(this, series);
