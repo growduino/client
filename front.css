@@ -8,6 +8,11 @@ html, body {
 	font-family: sans-serif;
 }
 
+#top {
+	margin: 25px auto;
+	width: 960px;
+}
+
 #main {
 	margin: 25px auto;
 	width: 960px;
@@ -93,7 +98,27 @@ html, body {
 	clear: both;
 }
 
+/* forms */
+form {
+
+}
+form table {
+	text-align: left;
+}
+form table tr {
+
+}
+form table tr th {
+	vertical-align: top;
+}
+form table tr th.caption {
+	background: #99e;
+}
+form table tr td {
+
+}
+
 /* graphs */
 .dygraph-legend {
-	
+
 }

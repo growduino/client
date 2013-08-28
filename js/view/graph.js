@@ -1,6 +1,6 @@
 // Graphing component
-define(['util/mx-conf', 'util/mx-pers', 'dygraph', 'underscore', 'backbone', ],
-function(Configurable,	Persistable, Dygraph){
+define(['util/mx-conf', 'util/mx-pers', 'dygraph', 'underscore', 'backbone'],
+function(Configurable, Persistable, Dygraph){
 
 //	console.log(Configurable);
 //	console.log(Persistable);
@@ -94,4 +94,3 @@ function(Configurable,	Persistable, Dygraph){
 	// GraphView (configurable|persistable)
 	return Backbone.View.extend(graph);
 });
-

@@ -2,8 +2,8 @@
 // - Growduino Client v 0.2 -
 
 
-define(['util/mx-conf', 'util/mx-pers', 'view/log', 'view/graph'],
-function(Configurable, Persistable, Log, Graph){
+define(['util/mx-conf', 'util/mx-pers', 'view/log', 'view/graph', 'view/form'],
+function(Configurable, Persistable, Log, Graph, Form){
 
 	var App = {};
 
@@ -13,6 +13,8 @@ function(Configurable, Persistable, Log, Graph){
 		App.defaultOptions = {
 			cacheNamespace: 'app-cache'
 		};
+
+		App.components = {};
 
 		/**
 		 * @param {Object} options (mx-conf)
@@ -51,6 +53,19 @@ function(Configurable, Persistable, Log, Graph){
 				'Humidity': 'blue',
 				'Light': 'yellow'
 			});
+
+			// input form
+			var app = this;
+			var $form = this.getComponent('inputForm');
+				$form.$el.on('click', '[name=load]', function(evt){
+					evt.preventDefault();
+					app['inputFormLoad'].call(app, $form);
+				});
+				$form.$el.on('submit', function(evt){
+					evt.preventDefault();
+					app['inputFormSubmit'].call(app, $form);
+				});
+				$form.render($('#top'));
 
 			return this;
 		};
@@ -336,6 +351,110 @@ function(Configurable, Persistable, Log, Graph){
 			});
 
 			return series;
+		};
+
+		/**
+		 * Factory shortcut.
+		 *
+		 * @param {String} name
+		 * @return
+		 */
+		App.getComponent = function(name){
+			var cb = 'create'.concat(name.replace(/^([a-z])/, function($1){
+				return $1.toUpperCase();
+			}));
+
+			if (!_.isFunction(this[cb])) {
+				throw 'Factory method missing:' + cb;
+			}
+
+			return this[cb].call(this, name);
+		};
+
+		/**
+		 * @param {String} name
+		 * @return {Backbone.View}
+		 */
+		App.createInputForm = function(name){
+			var form = new Form();
+				form.setName(name || 'inputForm');
+				form.setCaption('Sensors');
+
+				form.addTextArea('inputs', 'inputs', {
+					cols: 50,
+					rows: 1
+				});
+				form.addButton('load');
+				form.addSubmit('save');
+
+			return form;
+		};
+
+		App.inputFormLoad = function($form){
+			var app = this;
+			$.ajax({
+				type: 'GET',
+				url: 'vystup.jso',
+				dataType: 'text'
+			})
+			.done(function(data){
+				$form.setValues({
+					'inputs': data
+				});
+			})
+			.fail(function(response, status, error){
+				app.logger.show($form.getName() + ': ' + error.message, app.logger.ERROR);
+			})
+		};
+
+		/**
+		 * @param {Backbone.View} $form
+		 */
+		App.inputFormSubmit = function($form){
+			var app = this;
+			var data = $form.getValues();
+
+			$.ajax({
+				type: 'POST',
+				url: '/save',
+				data: data.inputs
+			})
+			.done(function(){
+				$form.reset();
+			})
+			.fail(function(response, status, error){
+				app.logger.show($form.getName() + ': ' + error.message, app.logger.ERROR);
+			});
+		};
+
+		/**
+		 * @param {String} name
+		 * @return {Backbone.View}
+		 */
+		App.createGraphControlForm = function(name){
+			var form = new Form();
+				form.setName(name || 'graphControlForm');
+
+				form.addCheckbox('temp1', 'Temperature');
+				form.addCheckbox('humidity', 'Humidity');
+				form.addCheckbox('light', 'Light');
+				form.addText('date', null, {
+					placeholder: 'yyyy/m/d'
+				});
+				form.addSubmit('Load');
+
+				form.setRenderer(function(){
+					var $wrap = $('<div>');
+
+					$(this.part).each(function(name, part){
+						$wrap.append(part.$input);
+						$wrap.append(part.$label || null);
+					});
+
+					return $wrap;
+				});
+
+			return form;
 		};
 
 
