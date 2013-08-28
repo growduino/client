@@ -378,9 +378,9 @@ function(Configurable, Persistable, Log, Graph, Form){
 		App.createInputForm = function(name){
 			var form = new Form();
 				form.setName(name || 'inputForm');
-				form.setCaption('Sensors');
+				form.setCaption('Pins');
 
-				form.addTextArea('inputs', 'inputs', {
+				form.addTextArea('inputs', 'data', {
 					cols: 50,
 					rows: 1
 				});
