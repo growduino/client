@@ -2,13 +2,9 @@
 define(['util/mx-conf', 'util/mx-pers', 'dygraph', 'underscore', 'backbone'],
 function(Configurable, Persistable, Dygraph){
 
-//	console.log(Configurable);
-//	console.log(Persistable);
-//	console.log(Dygraph);
-
-
-	var Graph = function(){
-		this.defaultOptions = {
+	var exports = {
+		/** @var {Object} */
+		defaultOptions: {
 			'title': 'Graph',
 			'templateSelector': '#graph',
 			'styles': {
@@ -16,13 +12,16 @@ function(Configurable, Persistable, Dygraph){
 					border: '1px solid red'
 				}
 			}
-		};
+		},
 
-		this.data = [];
-		this.meta = {};
-		this.plot = null;
+		/** @var {Array} dygraph data series */
+		data: [],
+		/** @var {Object} dygraph data options */
+		meta: {},
+		/** @var {Object} dygraph plot */
+		plot: null,
 
-		this.start = function($el, options){
+		start: function($el, options){
 			this.$el = $el;
 			this.config(_.defaults(options || {}, this.defaultOptions));
 
@@ -46,9 +45,9 @@ function(Configurable, Persistable, Dygraph){
 			this.started = true;
 
 			return this;
-		};
+		},
 
-		this.setData = function(data, meta){
+		setData: function(data, meta){
 			if (!_.isArray(data)) {
 				throw 'Invalid argument: data has to be an object';
 			}
@@ -59,38 +58,35 @@ function(Configurable, Persistable, Dygraph){
 			this.data = data;
 			this.meta = meta;
 
-
 			return this;
-		};
+		},
 
 		/**
 		 * Draws graph.
 		 */
-		this.draw = function(options){
+		draw: function(options){
 			var meta = _.defaults(options || {}, this.meta);
 			var data = this.data;
+			var element = this.$el.find('#'.concat(this.cid)+' .graph-body').get(0)
 
 			this.plot = new Dygraph(
-				this.$el.find('#'.concat(this.cid)+' .graph-body').get(0),
+				element,
 				data,
 				meta
 			);
 
 			return this;
-		};
+		},
 
-		this.reset = function(){
+		unzoom: function(){
 			this.plot.resetZoom();
-		};
+		}
 	};
 
+	Configurable._check(exports);
+	Persistable._check(exports);
 
-	Configurable._check(Graph);
-	Persistable._check(Graph);
-
-	var graph = _.extend(new Graph(), Configurable);
-		graph =  _.extend(graph, Persistable);
 
 	// GraphView (configurable|persistable)
-	return Backbone.View.extend(graph);
+	return Backbone.View.extend(_.extend(_.extend(exports, Configurable), Persistable));
 });
