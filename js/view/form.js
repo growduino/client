@@ -1,15 +1,22 @@
 // Forms!
 define(['underscore', 'backbone'], function(){
 
-	var Form = function(){
+	return Backbone.View.extend({
+		// Backbone overrirde
 
-		// Backbone.View
-		this.tagName = 'form';
+		/** @var {String} */
+		tagName: 'form',
+
+		initialize: function(){
+			// @wtf property overload bug: namespace introduced
+			this.part[this.cid] = {};
+		},
 
 		/**
 		 * @param {HTMLElement} parent
+		 * @return {Object} jQ form
 		 */
-		this.render = function(parent){
+		render: function(parent){
 			this.$el.attr({
 				id: this.name
 			});
@@ -23,16 +30,20 @@ define(['underscore', 'backbone'], function(){
 			}
 
 			return this.$el;
-		};
+		},
 
 		// Extensions
 
-		/** @var {String} */
-		this.name = null;
-		this.getName = function(){
+		/** @var {String|null} */
+		name: null,
+		/** @return {String|null} */
+		getName: function(){
 			return this.name;
-		};
-		this.setName = function(name){
+		},
+		/** @param {String} name
+		 * @return {Backbone.View}
+		 */
+		setName: function(name){
 			if (!_.isString(name)) {
 				throw 'Form name must be string';
 			}
@@ -40,27 +51,32 @@ define(['underscore', 'backbone'], function(){
 			this.name = name;
 
 			return this;
-		};
+		},
 
-		/** @var {String} */
-		this.caption = null;
-		this.getCaption = function(){
+		/** @var {String|null} */
+		caption: null,
+		/** @return {String|null} */
+		getCaption: function(){
 			return this.caption;
-		};
-		this.setCaption = function(text){
+		},
+		/** @param {String} text
+		 * @return {Backbone.View}
+		 */
+		setCaption: function(text){
 			this.caption = text;
-		};
+			return this;
+		},
 
-		this.part = {};
-		this.getPart = function(name){
-			if (!_.isObject(this.part[name])) {
+		part: {},
+		getPart: function(name){
+			if (!_.isObject(this.part[this.cid][name])) {
 				throw 'No such part: ' + name;
 			}
 
-			return this.part[name];
-		};
-		this.addPart = function(name, $input, label){
-			if (!_.isUndefined(this.part[name])) {
+			return this.part[this.cid][name];
+		},
+		addPart: function(name, $input, label){
+			if (!_.isUndefined(this.part[this.cid][name])) {
 				throw new 'Part already exists:' + name;
 			}
 
@@ -70,23 +86,32 @@ define(['underscore', 'backbone'], function(){
 				}).text(label || name);
 			}
 
-			this.part[name] = {
+			var part = {
 				'$input': $input,
 				'$label': $label || null
 			};
 
+			this.part[this.cid][name] = part;
+
 			return $input;
-		};
-		this.getPartId = function(name){
+		},
+		/** @param {String} name
+		 * @return {String} form unique id
+		 */
+		getPartId: function(name){
 			return this.name + '-' + name;
-		};
+		},
 
 		/** @var {Function} */
-		this.renderer = null;
-		this.getRenderer = function(){
+		renderer: null,
+		/** @return {Function} */
+		getRenderer: function(){
 			return this.renderer || this.defaultRenderer;
-		};
-		this.setRenderer = function(cb){
+		},
+		/** @param {Function}
+		 * @return {Backbone.View}
+		 */
+		setRenderer: function(cb){
 			if (!_.isFunction(cb)) {
 				throw 'Renderer callback is not a function';
 			}
@@ -94,47 +119,60 @@ define(['underscore', 'backbone'], function(){
 			this.renderer = cb;
 
 			return this;
-		};
+		},
 
-		this.setValues = function(values){
-			var self = this;
+		/**
+		 * @param {Object} name:value pairs
+		 * @param {Backbone.View}
+		 */
+		setValues: function(values){
+			//var self  = this;
+			var parts = this.part[this.cid];
 			var names = _.keys(values);
+
 			$(_.values(values)).each(function(i, value){
-				if (!_.isObject(self.part[names[i]])) {
+				if (!_.isObject(parts[names[i]])) {
 					return;
 				}
 
-				var $input = self.part[names[i]].$input;
+				var $input = parts[names[i]].$input;
 
 				if ($input.is(':checkbox')) {
 					$input.attr('checked', value);
 				} else {
 					$input.val(value);
 				}
+
+				return this;
 			});
 
 			return this;
-		};
-		this.getValues = function(){
+		},
+		/** @return {Object} name:value pairs */
+		getValues: function(){
 			var values = {};
-			var names = _.keys(this.part);
+			var names = _.keys(this.part[this.cid]);
 
-			$(_.values(this.part)).each(function(i, part){
+			$(_.values(this.part[this.cid])).each(function(i, part){
 				values[names[i]] = part.$input.val();
 			});
 
 			return values;
-		};
+		},
 
-		this.reset = function(){
+		reset: function(){
 			this.$el.trigger('reset');
-		};
-
-		this.clear = function(){
+		},
+		clear: function(){
 			// @todo
-		};
+		},
 
-		this.addText = function(name, label, attributes){
+		/**
+		 * @param {String} name
+		 * @param {Object} attributes [optional]
+		 * @return {Object} jQ input
+		 */
+		addText: function(name, label, attributes){
 			if (!_.isString(name)) {
 				throw 'Name must be specified';
 			}
@@ -146,9 +184,14 @@ define(['underscore', 'backbone'], function(){
 			})).attr('id', id);
 
 			return this.addPart(name, $input, label);
-		};
+		},
 
-		this.addTextArea = function(name, label, attributes){
+		/**
+		 * @param {String} name
+		 * @param {Object} attributes [optional]
+		 * @return {Object} jQ textarea
+		 */
+		addTextArea: function(name, label, attributes){
 			if (!_.isString(name)) {
 				throw 'Name must be specified';
 			}
@@ -159,9 +202,14 @@ define(['underscore', 'backbone'], function(){
 			})).attr('id', id);
 
 			return this.addPart(name, $input, label);
-		};
+		},
 
-		this.addButton = function(name, label, attributes){
+		/**
+		 * @param {String} name
+		 * @param {Object} attributes [optional]
+		 * @return {Object} jQ input
+		 */
+		addButton: function(name, label, attributes){
 			if (!_.isString(name)) {
 				throw 'Name must be specified';
 			}
@@ -175,16 +223,24 @@ define(['underscore', 'backbone'], function(){
 			.val(label || name);
 
 			return this.addPart(name, $input, null);
-		};
+		},
 
-		this.addSubmit = function(name, label, attributes){
-			var $input = this.addButton(name, label, attributes);
-				$input.attr('type', 'submit');
+		/**
+		 * @param {String} name
+		 * @param {Object} attributes [optional]
+		 * @return {Object} jQ input
+		 */
+		addSubmit: function(name, label, attributes){
+			return this.addButton(name, label, attributes)
+						.attr('type', 'submit');
+		},
 
-			return $input;
-		};
-
-		this.addCheckbox = function(name, label, attributes){
+		/**
+		 * @param {String} name
+		 * @param {Object} attributes [optional]
+		 * @return {Object} jQ input
+		 */
+		addCheckbox: function(name, label, attributes){
 			if (!_.isString(name)) {
 				throw 'Name must be specified';
 			}
@@ -196,9 +252,14 @@ define(['underscore', 'backbone'], function(){
 			})).attr('id', id);
 
 			return this.addPart(name, $input, label);
-		};
+		},
 
-		this.addHidden = function(name, attributes){
+		/**
+		 * @param {String} name
+		 * @param {Object} attributes [optional]
+		 * @return {Object} jQ input
+		 */
+		addHidden: function(name, attributes){
 			if (!_.isString(name)) {
 				throw 'Name must be specified';
 			}
@@ -210,10 +271,13 @@ define(['underscore', 'backbone'], function(){
 			})).attr('id', id);
 
 			return this.addPart(name, $input);
-		};
+		},
 
-		this.defaultRenderer = function(){
-			if (_.isUndefined(this.part)) {
+		/** Method for rendering parts
+		 * @return {Function}
+		 */
+		defaultRenderer: function(){
+			if (_.isUndefined(this.part[this.cid])) {
 				throw 'Form parts not defined.';
 			}
 
@@ -222,15 +286,15 @@ define(['underscore', 'backbone'], function(){
 			if (_.isString(this.caption)) {
 				var $caption = $('<tr>');
 					$caption.append($('<th>').attr({
-						colspan: 2,
-						class: 'caption'
+						'colspan': 2,
+						'class': 'caption'
 					}).html(this.caption));
 
 				$table.append($caption);
 			}
 
 			var $row, $th, $td;
-			$(_.values(this.part)).each(function(name, part) {
+			$(_.values(this.part[this.cid])).each(function(name, part) {
 				$th = $('<th>').append(part.$label);
 				$td = $('<td>').append(part.$input);
 
@@ -247,8 +311,8 @@ define(['underscore', 'backbone'], function(){
 			this.$el.append($table);
 
 			return $table;
-		};
-	};
+		}
 
-	return Backbone.View.extend(new Form());
+	});
+
 });
