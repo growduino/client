@@ -1,40 +1,31 @@
 <!DOCTYPE html>
 <html>
 	<head>
-		<title>GrowduinoClient v0.1</title>
+		<title>GrowduinoClient 0.3</title>
 		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 		<link href="front.css" rel="stylesheet">
 
 		<script type="application/javascript" src="js/lib/require.js" data-main="setup"></script>
 	</head>
 	<body class="layout">
-		<div id="top">
+		<!-- canvas -->
+ 		<div id="top">
 		</div>
-		
+
 		<div id="main">
 			<div class="clr">&nbsp;</div>
 		</div>
 
 		<div id="log">
 		</div>
+		<!-- /canvas -->
 
 		<!-- templates -->
 		<script type="text/html" id="graph">
 		<div class="graph template" id="{id}">
 			<div class="graph-title">{title}</div>
 			<div class="graph-body"></div>
-			<div class="graph-controls">
-				<form>
-					<input type="checkbox" name="temp1" title="Temperature" checked>
-					<label for="temp1">TEMP</label>
-					<input type="checkbox" name="humidity" title="Humidity" checked>
-					<label for="humidity">HUM</label>
-					<input type="checkbox" name="light" title="Light" checked>
-					<label for="light">LIGHT</label>
-					<input type="text" name="date" placeholder="yyyy\m\d">
-					<input type="submit" value="Load">
-				</form>
-			</div>
+			<div class="graph-controls"></div>
 		</div>
 		</script>
 
