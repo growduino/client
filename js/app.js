@@ -1,20 +1,19 @@
 // Application bootstrap file
 // - Growduino Client v 0.2 -
 
-
 define(['util/mx-conf', 'util/mx-pers', 'view/log', 'view/graph', 'view/form'],
 function(Configurable, Persistable, Log, Graph, Form){
 
 	var App = {};
 
-		App.VERSION = '0.2';
+		App.VERSION = '0.3';
 		App.NAME = 'GrowduinoClientApp';
 
 		App.defaultOptions = {
 			cacheNamespace: 'app-cache'
 		};
 
-		App.components = {};
+		App.component = {};
 
 		/**
 		 * @param {Object} options (mx-conf)
@@ -57,6 +56,7 @@ function(Configurable, Persistable, Log, Graph, Form){
 			// input form
 			var app = this;
 			var $form = this.getComponent('inputForm');
+				$form.$el.off();
 				$form.$el.on('click', '[name=load]', function(evt){
 					evt.preventDefault();
 					app['inputFormLoad'].call(app, $form);
@@ -97,11 +97,15 @@ function(Configurable, Persistable, Log, Graph, Form){
 		 * Success callback.
 		 */
 		App.onDataLoaded = function(/*series1, ...*/){
-			var self = this;
+			if (0 === arguments.length) {
+				throw 'Recieved no data';
+			}
 
+			var self = this;
 			var series = [];
 
 			$(arguments).each(function(i, x){
+				// @todo data sniff for keys: "time, name, min, h, day"
 				series.push(self['get' + self.dataTypes[i] + 'Data'](x[0].min, new Date(parseInt(x[0].time))));
 			});
 
@@ -127,6 +131,7 @@ function(Configurable, Persistable, Log, Graph, Form){
 		 * Error callback.
 		 */
 		App.onDataFailed = function() {
+			// try to load last cahced data
 			this.data = this.cache.load('data', function(items){
 				var deserialized = [];
 				var item;
@@ -148,97 +153,49 @@ function(Configurable, Persistable, Log, Graph, Form){
 		/**
 		 * Data visualization.
 		 */
-		App.showData = function(graph){
-			var graph = graph || new Graph();
-			if (!graph.started) {
-				graph.start($('#main'), {
+		App.showData = function(graphName){
+			if (_.isEmpty(this.data)) {
+				throw 'No data to display';
+			}
+			if (_.isEmpty(this.dataTypes)) {
+				throw 'Data types not set';
+			}
+			if (_.isEmpty(this.dataColors)) {
+				throw 'Data colors not set';
+			}
+
+			var $graph = this.getComponent(graphName || 'mainGraph');
+
+			// @todo render()
+			if (!$graph.started) {
+				$graph.start($('#main'), {
 					'title': this.dataTypes.join('-')
 				});
 			}
 
 				this.dataTypes.unshift("Time");
 
-				graph.setData(this.data, {
+				$graph.setData(this.data, {
 					labels:  this.dataTypes,
 					colors: this.dataColors,
 					fillGraph: true
 				});
-				graph.draw({
+				$graph.draw({
 					width: 910,
 					height: 380
 				});
 
-				var self = this;	// App
+				var app = this;	// App
 
 				// controls
-				graph.$el.off();
-				graph.$el.on('submit', 'form', function(evt){
-					evt.preventDefault();
-
-					var $form = $(this);
-					var vals = $form.serializeArray();
-					var date = _.last(vals);
-
-					// @todo remove after rename data folders
-					var dataName = function(x){
-						if (x.match('humidity')) return 'Humidity';
-						if (x.match('light')) return 'Light';
-						if (x.match('temp1')) return 'Temperature';
-
-						return x;
-					}
-
-					var d = date.value.split('/'),
-						baseDate = new Date(),
-						dayDate;
-					var dataTypes = [];
-					var dayData = {};
-
-					var path = 'data/';
-					var name;
-
-					var pass = false;
-
-					$(_.initial(vals)).each(function(i, x){
-						if (x.value.match('on')) {
-							name = dataName(x.name);
-							dayData[name] = [];
-							dataTypes.push(name);
-
-							$(_.range(24)).each(function(i, hour){
-								$.when($.ajax({
-									url: path.concat(x.name, '/', date.value, '/', hour, '.jso'),
-									dataType: 'json',
-									async: false
-								}))
-								.done(function(data){
-									pass = true;
-									dayDate = new Date(baseDate.toString());
-									dayDate.setYear(d[0]);
-									dayDate.setMonth(d[1]);
-									dayDate.setDate(d[2]);
-									dayDate.setHours(hour)
-
-									$(self['get' + name + 'Data'].call(self, data.min, dayDate)).each(function(i, x) {
-										dayData[name].push(x);
-									});
-								});
-							});
-						}
-					});
-
-					if (!pass) {
-						self.logger.show('No data for this date: ' + date.value, self.logger.WARN);
+				var $form = this.getComponent('graphControlForm');
+					$form.$el.off();
+					$form.$el.on('submit', function(evt){
+						evt.preventDefault();
+						app['graphControlFormSubmit'].call(app, $form);
 						return false;
-					}
-
-					self.dataTypes = dataTypes;
-					self.dataColors = ['blue', 'green', 'yellow'];
-					self.data = self.getCombinedData.apply(self, _.values(dayData));
-					self.showData.call(self, graph);
-
-					return false;
-				});
+					});
+					$form.render($graph.$el.find('.graph-controls'));
 		};
 
 		/**
@@ -355,7 +312,7 @@ function(Configurable, Persistable, Log, Graph, Form){
 		 * Factory shortcut.
 		 *
 		 * @param {String} name
-		 * @return
+		 * @return {Object}
 		 */
 		App.getComponent = function(name){
 			var cb = 'create'.concat(name.replace(/^([a-z])/, function($1){
@@ -366,7 +323,11 @@ function(Configurable, Persistable, Log, Graph, Form){
 				throw 'Factory method missing:' + cb;
 			}
 
-			return this[cb].call(this, name);
+			if (_.isUndefined(this.component[name])) {
+				this.component[name] = this[cb].call(this, name);
+			}
+
+			return this.component[name];
 		};
 
 		/**
@@ -388,6 +349,9 @@ function(Configurable, Persistable, Log, Graph, Form){
 			return form;
 		};
 
+		/**
+		 * @param {Backbone.View} $form
+		 */
 		App.inputFormLoad = function($form){
 			var app = this;
 			$.ajax({
@@ -419,6 +383,7 @@ function(Configurable, Persistable, Log, Graph, Form){
 			})
 			.done(function(){
 				$form.reset();
+				app.logger.show($form.getName() + ': Data saved', app.logger.SUCCESS);
 			})
 			.fail(function(response, status, error){
 				app.logger.show($form.getName() + ': ' + error.message, app.logger.ERROR);
@@ -432,21 +397,23 @@ function(Configurable, Persistable, Log, Graph, Form){
 		App.createGraphControlForm = function(name){
 			var form = new Form();
 				form.setName(name || 'graphControlForm');
+				form.setCaption('Controls');
 
-				form.addCheckbox('temp1', 'Temperature');
-				form.addCheckbox('humidity', 'Humidity');
-				form.addCheckbox('light', 'Light');
-				form.addText('date', null, {
-					placeholder: 'yyyy/m/d'
+				form.addSelect('year', 'Year', {
+					'2013': 2013
 				});
-				form.addSubmit('Load');
+				form.addSelect('month', 'Month', _.object(_.range(1, 13), _.range(1, 13)));
+				form.addSelect('day', 'Day', _.object(_.range(1, 32), _.range(1, 32)));
+				form.addSubmit('load', 'Load');
+				form.addButton('unzoom', 'Unzoom').hide();	// @todo plot event handler
 
 				form.setRenderer(function(){
+					// all-in-line
 					var $wrap = $('<div>');
 
-					$(this.part).each(function(name, part){
-						$wrap.append(part.$input);
+					$(_.values(this.part[this.cid])).each(function(i, part){
 						$wrap.append(part.$label || null);
+						$wrap.append(part.$input);
 					});
 
 					return $wrap;
@@ -455,8 +422,77 @@ function(Configurable, Persistable, Log, Graph, Form){
 			return form;
 		};
 
+		/**
+		 * @param {Backbone.View} $form
+		 */
+		App.graphControlFormSubmit = function($form){
+			var data = $form.getValues();
 
-	var appConfigurable = _.extend(App, Configurable);
+			var date = '';
+			if (data.year) {
+				date = date.concat('/', data.year);
+			}
+			if (data.month && data.year) {
+				date = date.concat('/', data.month);
+			}
+			if (data.day && data.month && data.year) {
+				date = date.concat('/', data.day);
+			}
 
-	return appConfigurable;
+			var dataSource = function(name){
+				if (name.match('Temperature')) return 'Temp1';
+				else return name;
+			};
+
+			var baseDate;
+			var dataTypes = ['Humidity', 'Temperature', 'Light', ];	// @todo
+			var dataColors = ['green', 'blue', 'yellow'];
+			var dayData = {};
+
+			var path = 'data/';
+			var pass = false;
+
+			var self = this;
+
+			$(dataTypes).each(function(i, source){
+				dayData[source] = [];
+
+				$(_.range(24)).each(function(hour){
+					$.when($.ajax({
+						url: path.concat(dataSource(source).toUpperCase(), date, '/', hour, '.jso'),
+						dataType: 'json',
+						async: false
+					}))
+					.done(function(payload){
+						pass = true;
+						baseDate = new Date(data.year, data.month, data.day);
+						baseDate.setHours(hour);
+
+						$(self['get' + source + 'Data'].call(self, payload.min, baseDate)).each(function(i, x) {
+							dayData[source].push(x);
+						});
+					});
+				});
+			});
+
+			if (!pass) {
+				this.logger.show('No data for this date: ' + date, this.logger.WARN);
+				return;
+			} else {
+				this.logger.show('Fetched data for this date: ' + date, this.logger.SUCCESS);
+			}
+
+			this.dataTypes = dataTypes;
+			this.dataColors = dataColors;
+			this.data = this.getCombinedData.apply(this, _.values(dayData));
+			this.showData.call(this, 'mainGraph');
+		};
+
+		App.createMainGraph = function(name){
+			return new Graph();
+		};
+
+
+	// App singleton @todo instance?
+	return _.extend(App, Configurable);
 });

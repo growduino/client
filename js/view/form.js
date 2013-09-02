@@ -204,6 +204,26 @@ define(['underscore', 'backbone'], function(){
 			return this.addPart(name, $input, label);
 		},
 
+		addSelect: function(name, label, items, attributes){
+			if (!_.isString(name)) {
+				throw 'Name must be specified';
+			}
+
+			var id = this.getPartId(name);
+			var $input = $('<select>')
+				.attr(_.defaults(attributes || {}, {
+					name: name
+				})).attr('id', id);
+
+				if (_.isObject(items)) {
+					for (var value in items) {
+						$input.append($('<option>').val(value).text(items[value]));
+					}
+				}
+
+			return this.addPart(name, $input, label);
+		},
+
 		/**
 		 * @param {String} name
 		 * @param {Object} attributes [optional]
