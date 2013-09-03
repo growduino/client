@@ -331,6 +331,35 @@ define(['underscore', 'backbone'], function(){
 			this.$el.append($table);
 
 			return $table;
+		},
+
+		/**
+		 * @param {Boolean} mode Show/hide loading overlay
+		 */
+		loading: function(mode){
+			var $spinner = this.$el.find('.loading');
+			if ($spinner.size() === 0) {
+				$spinner = $('<div>', {
+					'class': 'loading'
+				}).css({
+					'position': 'absolute',
+					'top': 0,
+					'left': 0,
+					'width': this.$el.width(),
+					'height': this.$el.height(),
+					'background': 'white',
+					'opacity': 0.6,
+					'zIndex': +99
+				});
+			}
+
+			if (mode) {
+				this.$el.css({
+					'position': 'relative'
+				}).append($spinner);
+			} else {
+				$spinner.remove();
+			}
 		}
 
 	});

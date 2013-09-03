@@ -458,6 +458,7 @@ function(Configurable, Persistable, Log, Graph, Form){
 		 * @param {Backbone.View} $form
 		 */
 		App.graphControlFormSubmit = function($form){
+			$form.loading(true);
 			var data = $form.getValues();
 
 			var date = '';
@@ -503,6 +504,8 @@ function(Configurable, Persistable, Log, Graph, Form){
 						$(self['get' + source + 'Data'].call(self, payload.min, baseDate)).each(function(i, x) {
 							dayData[source].push(x);
 						});
+					}).always(function(){
+						$form.loading(false);
 					});
 				});
 			});
