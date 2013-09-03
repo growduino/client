@@ -465,10 +465,10 @@ function(Configurable, Persistable, Log, Graph, Form){
 				date = date.concat('/', data.year);
 			}
 			if (data.month && data.year) {
-				date = date.concat('/', data.month);
+				date = date.concat('/', (data.month < 10 ? '0' : '').concat(data.month));
 			}
 			if (data.day && data.month && data.year) {
-				date = date.concat('/', data.day);
+				date = date.concat('/', (data.day < 10 ? '0' : '').concat(data.day));
 			}
 
 			var dataSource = function(name){
@@ -511,7 +511,7 @@ function(Configurable, Persistable, Log, Graph, Form){
 				this.logger.show('No data for this date: ' + date, this.logger.WARN);
 				return;
 			} else {
-				this.logger.show('Fetched data for this date: ' + date, this.logger.SUCCESS);
+				this.logger.show('Loaded custom date: ' + date, this.logger.SUCCESS);
 			}
 
 			this.dataTypes = dataTypes;
