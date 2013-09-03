@@ -64,7 +64,10 @@ define(['util/mx-conf', 'jquery', 'underscore', 'backbone'], function(Configurab
 
 			// create message
 			var date = new Date();
-			var time = date.getHours() + ':' + date.getMinutes() + ':' + date.getSeconds();
+			var time = (date.getHours()   < 10 ? '0' : '').concat(date.getHours()) + ':'
+					 + (date.getMinutes() < 10 ? '0' : '').concat(date.getMinutes()) + ':'
+					 + (date.getSeconds() < 10 ? '0' : '').concat(date.getSeconds());
+
 			var id = 'log-message-'.concat(this.messages.size() + 1);
 
 			var data = new MessageModel({
