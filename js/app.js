@@ -20,6 +20,8 @@ function(Configurable, Persistable, Log, Graph, Form){
 		 * @return fluent
 		 */
 		App.init = function(options){
+			var app = this;
+
 			this.config(_.defaults(options || {}, this.defaultOptions));
 
 			// logging
@@ -31,30 +33,44 @@ function(Configurable, Persistable, Log, Graph, Form){
 			this.cache = _.extend({}, Persistable);
 			this.cache.setStore(this.option('cacheNamespace'));
 
-			// load default data
-			var sources = [
-				$.ajax({
-					url: 'SENSORS/temp1.jso',
-					dataType: 'json'
-				}),
-				$.ajax({
-					url: 'SENSORS/humidity.jso',
-					dataType: 'json'
-				}),
-				$.ajax({
-					url: 'SENSORS/light.jso',
-					dataType: 'json'
-				})
-			];
+			// load last sensor data
+			$.when($.ajax({
+				url: 'vstup.jso',
+				dataType: 'json'
+			})).done(function(data){
+				var inputs = _.values(data);
 
-			this.loadData(sources, {
-				'Temperature': 'green',
-				'Humidity': 'blue',
-				'Light': 'yellow'
+				var sources = [];
+				var path = 'sensors/';
+				$(inputs).each(function(i, name){
+					sources.push($.ajax({
+						url: path.concat(name, '.jso'),
+						dataType: 'json'
+					}));
+				});
+
+				var sourceTypes = app.translate(inputs, {
+					'humidity': 'Humidity',
+					'temp1': 'Temperature',
+					'light': 'Light'
+				});
+				var sourceSettings = app.translate(_.values(sourceTypes), {
+					'Temperature': 'green',
+					'Humidity': 'blue',
+					'Light': 'yellow'
+				});
+
+				app.logger.show('Fetched local config file:' + JSON.stringify(data));
+
+				app.loadData(sources, sourceSettings);
+			}).fail(function(){
+				console.log(arguments);
+				app.logger.show('Failed to load local config file:', app.logger.ERROR);
 			});
 
+
+
 			// input form
-			var app = this;
 			var $form = this.getComponent('inputForm');
 				$form.$el.off();
 				$form.$el.on('click', '[name=load]', function(evt){
@@ -69,6 +85,18 @@ function(Configurable, Persistable, Log, Graph, Form){
 
 			return this;
 		};
+
+		App.translate = function(items, dict){
+			var output = {};
+
+			$(items).each(function(i, item){
+				if (_.contains(_.keys(dict), item)) {
+					output[item] = dict[item];
+				}
+			});
+
+			return output;
+		}
 
 		/**
 		 * Data loader.
@@ -124,7 +152,7 @@ function(Configurable, Persistable, Log, Graph, Form){
 				return serialized;
 			});
 
-			this.logger.show('Loaded fresh data');
+			this.logger.show('Loaded fresh data: ' + JSON.stringify(_.object(this.dataTypes, this.dataColors)));
 		};
 
 		/**
@@ -208,7 +236,11 @@ function(Configurable, Persistable, Log, Graph, Form){
 		App.getLightData = function(rawData, baseDate){
 			return this.getDataSeries(rawData, baseDate, function(val){
 				// sanitizer
+				// on-off
 				return (val === -999) ? NaN : 100;
+
+				// precise
+//				return (val === -999) ? NaN : Math.round(val/10, 1);
 			});
 		};
 
@@ -252,7 +284,6 @@ function(Configurable, Persistable, Log, Graph, Form){
 			var series = [];
 
 			$(rawData).each(function(i, x){
-
 				// sanitize
 				if (_.isFunction(sanitizer)) {
 					x = sanitizer(x);
