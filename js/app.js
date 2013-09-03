@@ -134,7 +134,8 @@ function(Configurable, Persistable, Log, Graph, Form){
 
 			$(arguments).each(function(i, x){
 				// @todo data sniff for keys: "time, name, min, h, day"
-				series.push(self['get' + self.dataTypes[i] + 'Data'](x[0].min, new Date(parseInt(x[0].time))));
+				var ts = parseInt(x[0].time) * 1000;
+				series.push(self['get' + self.dataTypes[i] + 'Data'](x[0].min, new Date(ts)));
 			});
 
 			this.data = this.getCombinedData.apply(this, series);
