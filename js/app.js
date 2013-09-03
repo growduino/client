@@ -458,69 +458,84 @@ function(Configurable, Persistable, Log, Graph, Form){
 		 * @param {Backbone.View} $form
 		 */
 		App.graphControlFormSubmit = function($form){
-			$form.loading(true);
-			var data = $form.getValues();
+			var app = this;
+			var vals = $form.getValues();
 
 			var date = '';
-			if (data.year) {
-				date = date.concat('/', data.year);
+			if (vals.year) {
+				date = date.concat('/', vals.year);
 			}
-			if (data.month && data.year) {
-				date = date.concat('/', (data.month < 10 ? '0' : '').concat(data.month));
+			if (vals.month && vals.year) {
+				date = date.concat('/', (vals.month < 10 ? '0' : '').concat(vals.month));
 			}
-			if (data.day && data.month && data.year) {
-				date = date.concat('/', (data.day < 10 ? '0' : '').concat(data.day));
+			if (vals.day && vals.month && vals.year) {
+				date = date.concat('/', (vals.day < 10 ? '0' : '').concat(vals.day));
 			}
 
-			var dataSource = function(name){
-				if (name.match('Temperature')) return 'Temp1';
-				else return name;
-			};
+			$form.loading(true);
 
-			var baseDate;
-			var dataTypes = ['Humidity', 'Temperature', 'Light', ];	// @todo
-			var dataColors = ['green', 'blue', 'yellow'];
-			var dayData = {};
-
-			var path = 'data/';
-			var pass = false;
-
-			var self = this;
-
-			$(dataTypes).each(function(i, source){
-				dayData[source] = [];
-
-				$(_.range(24)).each(function(hour){
-					$.when($.ajax({
-						url: path.concat(dataSource(source).toUpperCase(), date, '/', hour, '.jso'),
-						dataType: 'json',
-						async: false
-					}))
-					.done(function(payload){
-						pass = true;
-						baseDate = new Date(data.year, data.month, data.day);
-						baseDate.setHours(hour);
-
-						$(self['get' + source + 'Data'].call(self, payload.min, baseDate)).each(function(i, x) {
-							dayData[source].push(x);
-						});
-					}).always(function(){
-						$form.loading(false);
-					});
+			$.when($.ajax({
+				url: 'vstup.jso',
+				dataType: 'json'
+			})).done(function(data){
+				var inputs = _.values(data);
+				var sourceTypes = app.translate(inputs, {
+					'humidity': 'Humidity',
+					'temp1': 'Temperature',
+					'light': 'Light'
 				});
+				var sourceSettings = app.translate(_.values(sourceTypes), {
+					'Temperature': 'green',
+					'Humidity': 'blue',
+					'Light': 'yellow'
+				});
+
+				var baseDate;
+				var basePath = 'data/';
+				var dayData = {};
+				var pass = false;
+				var type;
+
+				for (var path in sourceTypes) {
+					type = sourceTypes[path];
+					dayData[type] = [];
+
+					$(_.range(24)).each(function(hour){
+						$.when($.ajax({
+							url: basePath.concat(path.toUpperCase(), date, '/', hour, '.jso'),
+							dataType: 'json',
+							async: false
+						}))
+						.done(function(payload){
+							pass = true;
+							baseDate = new Date(vals.year, vals.month, vals.day);
+							baseDate.setHours(hour);
+
+							$(app['get' + type + 'Data'].call(app, payload.min, baseDate)).each(function(i, x) {
+								dayData[type].push(x);
+							});
+						});
+					});
+				}
+
+				if (!pass) {
+					app.logger.show('No data for this date: ' + date, app.logger.WARN);
+					return;
+				} else {
+					app.logger.show('Loaded custom date: ' + date, app.logger.SUCCESS);
+				}
+
+				app.data = app.getCombinedData.apply(app, _.values(dayData));
+				app.dataTypes = _.keys(sourceSettings);
+				app.dataColors = _.values(sourceSettings);
+				app.showData.call(app, 'mainGraph');
+			})
+			.fail(function(){
+				console.log(arguments);
+			})
+			.always(function(){
+				$form.loading(false);
 			});
-
-			if (!pass) {
-				this.logger.show('No data for this date: ' + date, this.logger.WARN);
-				return;
-			} else {
-				this.logger.show('Loaded custom date: ' + date, this.logger.SUCCESS);
-			}
-
-			this.dataTypes = dataTypes;
-			this.dataColors = dataColors;
-			this.data = this.getCombinedData.apply(this, _.values(dayData));
-			this.showData.call(this, 'mainGraph');
 		};
 
 		App.createMainGraph = function(name){
