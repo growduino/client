@@ -121,15 +121,15 @@ function(Configurable, Persistable, Dygraph){
 				$(_.keys(labels)).each(function(i, name){
 					annotations.push({
 						series: name,
-						x: maxDate[i].getTime(),
-						shortText: 'H',
-						text: 'Max:' + max[i]
+						x: minDate[i].getTime(),
+						shortText: 'L',
+						text: 'Min: ' + min[i]
 					});
 					annotations.push({
 						series: name,
-						x: minDate[i].getTime(),
-						shortText: 'L',
-						text: 'Min:' + min[i]
+						x: maxDate[i].getTime(),
+						shortText: 'H',
+						text: 'Max: ' + max[i]
 					});
 				});
 
