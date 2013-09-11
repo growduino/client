@@ -15,6 +15,10 @@ function(Configurable, Persistable, Log, Graph, Form){
 
 		App.component = {};
 
+		App.dataPaths = [];
+		App.dataTypes = [];
+		App.dataColors = [];
+
 		/**
 		 * @param {Object} options (mx-conf)
 		 * @return fluent
@@ -34,59 +38,32 @@ function(Configurable, Persistable, Log, Graph, Form){
 			this.cache.setStore(this.option('cacheNamespace'));
 
 			// load last sensor data
-			$.when($.ajax({
-				url: 'vstup.jso',
-				dataType: 'json'
-			})).done(function(data){
-				var inputs = _.values(data);
-
-				var sources = [];
-				var path = 'sensors/';
-				$(inputs).each(function(i, name){
-					sources.push($.ajax({
-						url: path.concat(name, '.jso'),
-						dataType: 'json'
-					}));
-				});
-
-				var sourceTypes = app.translate(inputs, {
-					'humidity': 'Humidity',
-					'temp1': 'Temperature',
-					'light': 'Light'
-				});
-				var sourceSettings = app.translate(_.values(sourceTypes), {
-					'Temperature': 'green',
-					'Humidity': 'blue',
-					'Light': 'yellow'
-				});
-
-				app.logger.show('Fetched local config file:' + JSON.stringify(data));
-
-				app.loadData(sources, sourceSettings);
-			}).fail(function(){
-				console.log(arguments);
-				app.logger.show('Failed to load local config file:', app.logger.ERROR);
-			});
-
-
+			this.handleLoadFreshData();
 
 			// input form
-			var $form = this.getComponent('inputForm');
-				$form.$el.off();
-				$form.$el.on('click', '[name=load]', function(evt){
+			var $inputForm = this.getComponent('inputForm');
+				$inputForm.$el.off();
+				$inputForm.$el.on('click', '[name=load]', function(evt){
 					evt.preventDefault();
-					app['inputFormLoad'].call(app, $form);
+					app['inputFormLoad'].call(app, $inputForm);
 				});
-				$form.$el.on('submit', function(evt){
+				$inputForm.$el.on('submit', function(evt){
 					evt.preventDefault();
-					app['inputFormSubmit'].call(app, $form);
+					app['inputFormSubmit'].call(app, $inputForm);
 				});
-				$form.render($('#top'));
+				$inputForm.render($('#top'));
 
 			return this;
 		};
 
+		/** @experimental */
 		App.translate = function(items, dict){
+			// single item
+			if (_.isString(items)) {
+				return _.isUndefined(dict[items]) ? null : dict[items];
+			}
+
+			// moar items
 			var output = {};
 
 			$(items).each(function(i, item){
@@ -102,13 +79,9 @@ function(Configurable, Persistable, Log, Graph, Form){
 		 * Data loader.
 		 *
 		 * @param {Array} sources
-		 * @param {Object} settings
 		 * @return {Object} fluent
 		 */
-		App.loadData = function(sources, settings){
-			this.dataTypes = _.keys(settings);
-			this.dataColors = _.values(settings);
-
+		App.loadData = function(sources){
 			var self = this;
 
 			$.when.apply(this, sources)
@@ -131,11 +104,32 @@ function(Configurable, Persistable, Log, Graph, Form){
 
 			var self = this;
 			var series = [];
+			var ts, date, data;
 
 			$(arguments).each(function(i, x){
-				// @todo data sniff for keys: "time, name, min, h, day"
-				var ts = parseInt(x[0].time) * 1000;
-				series.push(self['get' + self.dataTypes[i] + 'Data'](x[0].min, new Date(ts)));
+				// sniff for keys: "time, name, min, h, day"
+				if (x[0].time) {
+					ts = new Date(parseInt(x[0].time) * 1000);
+				}
+				else {
+					throw 'Timestamp missing';
+				}
+				if (x[0].min) {
+					date = self.Time.getDate(ts) + ' ' + self.Time.getHour(ts);
+					data = x[0].min;
+				}
+				else if (x[0].h) {
+					date = self.Time.getDate(ts);
+					data = x[0].h;
+				}
+				else if (x[0].day) {
+					date = self.Time.getMonthPath(ts);
+					data = x[0].day;
+				}
+				else {
+					throw 'Unexpected data series identifier';
+				}
+				series.push(self['get' + self.dataTypes[i] + 'Data'](data, date));
 			});
 
 			this.data = this.getCombinedData.apply(this, series);
@@ -160,14 +154,16 @@ function(Configurable, Persistable, Log, Graph, Form){
 		 * Error callback.
 		 */
 		App.onDataFailed = function() {
+			var self = this;
 			// try to load last cahced data
 			this.data = this.cache.load('data', function(items){
 				var deserialized = [];
-				var item;
+				var item, d;
 
 				$(items).each(function(k, v){
+					d = new Date(v[0]);
 					item = v;
-					item[0] = new Date(v[0]);
+					item[0] = self.Time.getDate(d) + ' ' + self.Time.getMinute(d);
 					deserialized[k] = item;
 				});
 
@@ -183,6 +179,8 @@ function(Configurable, Persistable, Log, Graph, Form){
 		 * Data visualization.
 		 */
 		App.showData = function(graphName){
+			var app = this;
+
 			if (_.isEmpty(this.data)) {
 				throw 'No data to display';
 			}
@@ -202,36 +200,58 @@ function(Configurable, Persistable, Log, Graph, Form){
 				});
 			}
 
-				this.dataTypes.unshift("Time");
+			if (!_.contains(this.dataTypes, 'Time')) {
+				this.dataTypes.unshift('Time');
+			}
 
-				$graph.setData(this.data, {
-					labels:  this.dataTypes,
-					colors: this.dataColors,
-					fillGraph: true
-				});
-				$graph.draw({
-					width: 910,
-					height: 380
+			$graph.setData(this.data, {
+				labels:  this.dataTypes,
+				colors: this.dataColors,
+				fillGraph: true
 				});
 
-				var app = this;	// App
+			// controls: custom date control
+			var $dateForm = this.getComponent('dateGraphControlForm');
+				$dateForm.$el.off();
+				$dateForm.$el.on('submit', function(evt){
+					evt.preventDefault();
+					app['dateGraphControlFormSubmit'].call(app, $dateForm);
+					return false;
+				});
+				$dateForm.$el.addClass('lft');
+				$dateForm.render($graph.$el.find('.graph-controls'));
 
-				// controls
-				var $form = this.getComponent('graphControlForm');
-					$form.$el.off();
-					$form.$el.on('submit', function(evt){
-						evt.preventDefault();
-						app['graphControlFormSubmit'].call(app, $form);
-						return false;
-					});
-					$form.render($graph.$el.find('.graph-controls'));
+			// controls: button control
+			var $buttForm = this.getComponent('buttonGraphControlForm');
+				$buttForm.getPart('fresh').$input
+				.off()
+				.on('click', function(){
+					app['handleLoadFreshData'].call(app, $buttForm);
+				});
+				$buttForm.getPart('month').$input
+				.off()
+				.on('click', function(){
+					app['handleLoadMonthData'].call(app, $buttForm);
+				});
+				$buttForm.getPart('year').$input
+				.off()
+				.on('click', function(){
+					app['handleLoadYearData'].call(app, $buttForm);
+				});
+				$buttForm.$el.addClass('rgt');
+				$buttForm.render($graph.$el.find('.graph-controls'));
+
+			$graph.draw({
+				width: 910,
+				height: 380
+			});
 		};
 
 		/**
 		 * Data parser shortcut (light).
 		 *
 		 * @param {Array} rawData
-		 * @param {Date} baseDate
+		 * @param {String} baseDate
 		 * @return {Array}
 		 */
 		App.getLightData = function(rawData, baseDate){
@@ -249,7 +269,7 @@ function(Configurable, Persistable, Log, Graph, Form){
 		 * Data parser shortcut (temperature).
 		 *
 		 * @param {Array} rawData
-		 * @param {Date} baseDate
+		 * @param {String} baseDate
 		 * @return {Array}
 		 */
 		App.getTemperatureData = function(rawData, baseDate){
@@ -263,7 +283,7 @@ function(Configurable, Persistable, Log, Graph, Form){
 		 * Data parser shortcut (humidity).
 		 *
 		 * @param {Array} rawData
-		 * @param {Date} baseDate
+		 * @param {String} baseDate
 		 * @return {Array}
 		 */
 		App.getHumidityData = function(rawData, baseDate){
@@ -277,12 +297,31 @@ function(Configurable, Persistable, Log, Graph, Form){
 		 *	Data parser (general).
 		 *
 		 * @param {Array} rawData
-		 * @param {Date} baseDate
+		 * @param {String} baseDate
 		 * @param {Function} sanitizer
 		 * @return {Array}
 		 */
 		App.getDataSeries = function(rawData, baseDate, sanitizer){
+			var date, time, a = 0;
 			var series = [];
+			var delim;
+
+			if (/^\d{4}\/\d{2}$/.test(baseDate)) {
+				// days
+				delim = '/';
+				a = 1;	// adjust
+			}
+			else if (/^\d{4}\/\d{2}\/\d{2}$/.test(baseDate)) {
+				// hours
+				delim = ' ';
+			}
+			else if (/^\d{4}\/\d{2}\/\d{2} \d{2}$/.test(baseDate)) {
+				// minutes
+				delim = ':';
+			}
+			else {
+				throw 'Unexpected date: ' + baseDate;
+			}
 
 			$(rawData).each(function(i, x){
 				// sanitize
@@ -290,10 +329,22 @@ function(Configurable, Persistable, Log, Graph, Form){
 					x = sanitizer(x);
 				}
 
-				var date = new Date(baseDate.toString())
-					date.setMinutes(i);
-					date.setSeconds(0);
-					date.setMilliseconds(0);
+				time = ((i + a).toString().length < 2 ? '0' : '').concat(i + a);
+				date = baseDate.concat(delim, time);
+
+				if (date.match(/\s\d{2}$/)) {
+					// hour fix
+					date = date.substr(0, date.length - 3);
+					date = new Date(date);
+					date.setHours(time);
+				} else {
+					// days, minutes
+					date = new Date(Date.parse(date));
+				}
+
+				if (!Date.parse(date)) {
+					throw 'Unexpected date format: ' + date;
+				}
 
 				series.push([date, x]);
 			});
@@ -327,7 +378,7 @@ function(Configurable, Persistable, Log, Graph, Form){
 					});
 					if (!found) {
 						item = _.range(length + 1);
-						item = _.map(item, function(){
+						item = item.map(function(){
 							return NaN;
 						});
 						item[0] = dx[0];
@@ -423,21 +474,33 @@ function(Configurable, Persistable, Log, Graph, Form){
 		};
 
 		/**
+		 * Custom date graph control.
+		 *
 		 * @param {String} name
 		 * @return {Backbone.View}
 		 */
-		App.createGraphControlForm = function(name){
+		App.createDateGraphControlForm = function(name){
 			var form = new Form();
 				form.setName(name || 'graphControlForm');
-				form.setCaption('Controls');
 
-				form.addSelect('year', 'Year', {
-					'2013': 2013
-				});
-				form.addSelect('month', 'Month', _.object(_.range(1, 13), _.range(1, 13)));
-				form.addSelect('day', 'Day', _.object(_.range(1, 32), _.range(1, 32)));
+				var year = this.Time.getCurrentYear();
+				var opts = {};
+					opts[year.toString()] = year;
+
+				form.addSelect('year', 'Year', opts);
+
+				form.addSelect('month', 'Month', _.object(
+					_.values(_.range(1, 12)),
+					_.values(_.range(1, 12))
+				)).prepend($('<option>').val('0').text('-'));
+
+				form.addSelect('day', 'Day', _.object(
+					_.values(_.range(1, 31)),
+					_.values(_.range(1, 31))
+				)).prepend($('<option>').val('0').text('-'));
+
 				form.addSubmit('load', 'Load');
-				form.addButton('unzoom', 'Unzoom').hide();	// @todo plot event handler
+				form.addButton('unzoom', 'Reset view').hide();	// @todo plot event handler
 
 				form.setRenderer(function(){
 					// all-in-line
@@ -457,28 +520,82 @@ function(Configurable, Persistable, Log, Graph, Form){
 		/**
 		 * @param {Backbone.View} $form
 		 */
-		App.graphControlFormSubmit = function($form){
-			var app = this;
+		App.dateGraphControlFormSubmit = function($form){
 			var vals = $form.getValues();
 
-			var date = '';
-			if (vals.year) {
-				date = date.concat('/', vals.year);
-			}
-			if (vals.month && vals.year) {
-				date = date.concat('/', (vals.month < 10 ? '0' : '').concat(vals.month));
-			}
-			if (vals.day && vals.month && vals.year) {
-				date = date.concat('/', (vals.day < 10 ? '0' : '').concat(vals.day));
+			if (vals.year && !parseInt(vals.month)) {
+				this.handleLoadYearData.call(this, $form);
+				return;
 			}
 
-			$form.loading(true);
+			if (vals.year && parseInt(vals.month) && !parseInt(vals.day)) {
+				this.handleLoadMonthData.call(this, $form);
+				return;
+			}
+
+			if (vals.year && parseInt(vals.month) && parseInt(vals.day)) {
+				this.handleLoadDayData.call(this, $form);
+				return;
+			}
+
+			throw 'Invalid form values: ' + vals.toString();
+		};
+
+		/**
+		 * Button graph control
+		 * @param {String} name [optional]
+		 * @return {Backbone.View}
+		 */
+		App.createButtonGraphControlForm = function(name){
+			var form = new Form();
+				form.setName(name || 'graphControlForm');
+				form.setCaption('Load data: ');
+
+				form.addButton('year' , 'Year');
+				form.addButton('month', 'Month');
+				form.addButton('fresh', 'Fresh');
+
+				form.setRenderer(function(){
+					// all-in-line
+					var $wrap = $('<div>');
+
+					$wrap.append($('<small>').text(this.getCaption()));
+
+					$(_.values(this.part[this.cid])).each(function(i, part){
+						$wrap.append(part.$label || null);
+						$wrap.append(part.$input);
+					});
+
+					return $wrap;
+				});
+
+				return form;
+		};
+
+		/**
+		 * Graph control handler
+		 */
+		App.handleLoadFreshData = function($form){
+			var app = this;
+
+			if ($form) $form.loading(true);
 
 			$.when($.ajax({
 				url: 'vstup.jso',
-				dataType: 'json'
+				dataType: 'json',
+				async: false
 			})).done(function(data){
 				var inputs = _.values(data);
+
+				var sources = [];
+				var path = 'sensors/';
+				$(inputs).each(function(i, name){
+					sources.push($.ajax({
+						url: path.concat(name, '.jso'),
+						dataType: 'json'
+					}));
+				});
+
 				var sourceTypes = app.translate(inputs, {
 					'humidity': 'Humidity',
 					'temp1': 'Temperature',
@@ -490,56 +607,339 @@ function(Configurable, Persistable, Log, Graph, Form){
 					'Light': 'yellow'
 				});
 
-				var baseDate;
-				var basePath = 'data/';
-				var dayData = {};
-				var pass = false;
-				var type;
+				app.logger.show('Fetched local config file: ' + JSON.stringify(data));
 
-				for (var path in sourceTypes) {
-					type = sourceTypes[path];
-					dayData[type] = [];
-
-					$(_.range(24)).each(function(hour){
-						$.when($.ajax({
-							url: basePath.concat(path.toUpperCase(), date, '/', hour, '.jso'),
-							dataType: 'json',
-							async: false
-						}))
-						.done(function(payload){
-							pass = true;
-							baseDate = new Date(vals.year, vals.month, vals.day);
-							baseDate.setHours(hour);
-
-							$(app['get' + type + 'Data'].call(app, payload.min, baseDate)).each(function(i, x) {
-								dayData[type].push(x);
-							});
-						});
-					});
-				}
-
-				if (!pass) {
-					app.logger.show('No data for this date: ' + date, app.logger.WARN);
-					return;
-				} else {
-					app.logger.show('Loaded custom date: ' + date, app.logger.SUCCESS);
-				}
-
-				app.data = app.getCombinedData.apply(app, _.values(dayData));
+				// data setup
 				app.dataTypes = _.keys(sourceSettings);
 				app.dataColors = _.values(sourceSettings);
-				app.showData.call(app, 'mainGraph');
-			})
-			.fail(function(){
+				app.dataPaths = inputs;
+				// show
+				app.loadData.call(app, sources);
+
+				if ($form) $form.loading(false);
+			}).fail(function(){
 				console.log(arguments);
-			})
-			.always(function(){
-				$form.loading(false);
+				app.logger.show('Failed to load local config file: ', app.logger.ERROR);
 			});
+		};
+
+		/**
+		 * Graph control handler
+		 */
+		App.handleLoadDayData = function($form){
+			var app = this;
+
+			if (!this.dataTypes) {
+				throw 'Data types not set';
+			}
+			if (!this.dataColors) {
+				throw 'Data colors not set';
+			}
+			if (!this.dataPaths) {
+				throw 'Data paths not set';
+			}
+
+			if ($form) $form.loading(true);
+
+			var vals = $form.getValues();
+			var date = this.Time.getPath(vals);
+
+			$form.loading(true);
+
+
+			var types = _.rest(this.dataTypes);
+			var paths = this.dataPaths;
+
+			var basePath = 'data/';
+			var dayData = {};
+			var pass = false;
+			var type, path;
+
+			for (var i in paths) {
+				path = paths[i];
+				type = types[i];
+				dayData[type] = [];
+
+				$(_.range(24)).each(function(hour){
+					$.ajax({
+						url: basePath.concat(path, '/', date, '/', hour, '.jso'),
+						dataType: 'json',
+						async: false,
+						success: function(data){
+							pass = true;
+							$(app['get' + type + 'Data'].call(app, data.min, date.concat(' ', hour))).each(function(x, data) {
+								dayData[type].push(data);
+							});
+						},
+						error: function(){
+							// console.log(arguments);
+						}
+					});
+				});
+			}
+
+			$form.loading(false);
+
+			if (!pass) {
+				this.logger.show('No data for this date: ' + date, this.logger.WARN);
+				return;
+			} else {
+				this.logger.show('Loaded custom date: ' + date, this.logger.SUCCESS);
+			}
+
+			// data setup
+			this.data = this.getCombinedData.apply(this, _.values(dayData));
+			// show
+			this.showData.call(this, 'mainGraph');
+		};
+
+		/**
+		 * Graph control handler
+		 */
+		App.handleLoadMonthData = function($form){
+			var app = this;
+
+			$form.loading(true);
+
+			if (!this.dataTypes) {
+				throw 'Data types not set';
+			}
+			if (!this.dataColors) {
+				throw 'Data colors not set';
+			}
+			if (!this.dataPaths) {
+				throw 'Data paths not set';
+			}
+
+			var types = _.rest(this.dataTypes);
+			var paths = this.dataPaths;
+
+			var basePath = 'data/';
+			var currPath = '';
+			var baseDate;
+
+			var year = this.Time.getCurrentYear();
+			var month = this.Time.getCurrentMonth();
+
+			var vals = $form.getValues();
+			if (parseInt(vals.year) && parseInt(vals.month)) {
+				year = vals.year;
+				month = (vals.month.toString().length < 2 ? '0' : '').concat(vals.month);
+			}
+
+			var dayData = [];
+			var pass = false;
+
+			$(paths).each(function(i, path){
+				dayData[i] = [];
+				currPath = basePath.concat(path.toUpperCase(), '/', year, '/', month);
+				$(_.values(_.range(1, 32))).each(function(x, day){
+					// month data
+					day = (day < 10 ? '0' : '').concat(day);
+
+					$.ajax({
+						url: currPath.concat('/', day, '.jso'),
+						dataType: 'json',
+						async: false,
+						success: function(data){
+							if (!data.h) {
+								throw 'Expected day data series';
+							}
+
+							pass = true;
+							baseDate = app.Time.getPath({
+								year: year,
+								month: month,
+								day: day
+							});
+							$(app['get' + types[i] + 'Data'].call(app, data.h, baseDate)).each(function(x, data) {
+								dayData[i].push(data);
+							});
+						},
+						error: function(){
+//							console.log('failed to fetch:');
+//							console.log(month);
+						}
+					});
+				});
+			});
+
+			$form.loading(false);
+
+			if (!pass) {
+				this.logger.show('No data for this date: ' + year.concat('/', month), this.logger.WARN);
+				return;
+			} else {
+				this.logger.show('Loaded custom date: ' + year.concat('/', month), this.logger.SUCCESS);
+			}
+
+			// data setup
+			this.data = this.getCombinedData.apply(this, dayData);
+			// show
+			this.showData.call(this);
+		};
+
+		/**
+		 * Graph control handler
+		 */
+		App.handleLoadYearData = function($form){
+			var app = this;
+
+			$form.loading(true);
+
+			if (!this.dataTypes) {
+				throw 'Data types not set';
+			}
+			if (!this.dataColors) {
+				throw 'Data colors not set';
+			}
+			if (!this.dataPaths) {
+				throw 'Data paths not set';
+			}
+
+			var types = _.rest(this.dataTypes);
+			var paths = this.dataPaths;
+
+			var basePath = 'data/';
+			var currPath = '';
+			var baseDate;
+
+			var year = this.Time.getCurrentYear();
+			var vals = $form.getValues();
+			if (parseInt(vals.year)) {
+				year = vals.year;
+			}
+
+			var dayData = [];
+			var pass = false;
+
+			$(paths).each(function(i, path){
+				dayData[i] = [];
+				currPath = basePath.concat(path, '/', year);
+				$(_.values(_.range(1, 13))).each(function(x, month){
+					// month data
+					month = (month < 10 ? '0' : '').concat(month);
+
+					$.ajax({
+						url: currPath.concat('/', month, '.jso'),
+						dataType: 'json',
+						async: false,
+						success: function(data){
+							if (!data.day) {
+								throw 'Expected day data series';
+							}
+
+							pass = true;
+							baseDate = app.Time.getPath({
+								year: year,
+								month: month
+							});
+							$(app['get' + types[i] + 'Data'].call(app, data.day, baseDate)).each(function(x, data) {
+								dayData[i].push(data);
+							});
+						},
+						error: function(){
+//							console.log('failed to fetch:');
+//							console.log(month);
+						}
+					});
+				});
+			});
+
+			$form.loading(false);
+
+			if (!pass) {
+				this.logger.show('No data for this date: ' + year, this.logger.WARN);
+				return;
+			} else {
+				this.logger.show('Loaded custom date: ' + year, this.logger.SUCCESS);
+			}
+
+			// data setup
+			this.data = this.getCombinedData.apply(this, dayData);
+			// show
+			this.showData.call(this);
 		};
 
 		App.createMainGraph = function(name){
 			return new Graph();
+		};
+
+		// Datetime helper
+		App.Time = {
+			getCurrentYear: function(){
+				var y = (new Date()).getFullYear();
+				return y.toString();
+			},
+			getCurrentMonth: function(){
+				var m = (new Date()).getMonth() + 1;
+				return (m < 10 ? '0' : '').concat(m);
+			},
+			getCurrentDay: function(){
+				var d = (new Date()).getDate();
+				return (d < 10 ? '0' : '').concat(d);
+			},
+			getCurrentHour: function(){
+				var h = (new Date()).getHours();
+				return (h < 10 ? '0' : '').concat(h);
+			},
+			getCurrentMinute: function(){
+				var m = (new Date()).getMinutes();
+				return (m < 10 ? '0' : '').concat(m);
+			},
+			getCurrentDate: function(){
+				return this.getCurrentYear() + '/' + this.getCurrentMonth() + '/' + this.getCurrentDay();
+			},
+			getCurrentDatetime: function(){
+				return this.getCurrentDate() + ' ' + this.getCurrentHour() + ':' + this.getCurrentMinute();
+			},
+			getYear: function(date){
+				return date.getFullYear().toString();
+			},
+			getMonth: function(date){
+				var m = date.getMonth() + 1;
+				return (m < 10 ? '0' : '').concat(m);
+			},
+			getMonthPath: function(date){
+				return this.getYear(date) + '/' + this.getMonth(date);
+			},
+			getDay: function(date){
+				var d = date.getDate();
+				return (d < 10 ? '0' : '').concat(d);
+			},
+			getHour: function(date){
+				var h = date.getHours();
+				return (h < 10 ? '0' : '').concat(h);
+			},
+			getMinute: function(date){
+				var m = date.getMinutes();
+				return (m < 10 ? '0' : '').concat(m);
+			},
+			getDate: function(date){
+				return this.getYear(date) + '/' + this.getMonth(date) + '/' + this.getDay(date);
+			},
+			getDatetime: function(date){
+				return this.getDate(date) + ' ' + this.getHour(date) + ':' + this.getMinute(date);
+			},
+			/**
+			 * @param {Object}
+			 * @return {String} [YYYY[/MM[/DD]]]
+			 */
+			getPath: function(values){
+				var date = '';
+
+				if (values.year) {
+					date = date.concat(values.year);
+				}
+				if (values.month && values.year) {
+					date = date.concat('/', (values.month.toString().length < 2 ? '0' : '').concat(values.month));
+				}
+				if (values.day && values.month && values.year) {
+					date = date.concat('/', (values.day.toString().length < 2 ? '0' : '').concat(values.day));
+				}
+
+				return date;
+			}
 		};
 
 

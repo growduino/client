@@ -87,54 +87,54 @@ function(Configurable, Persistable, Dygraph){
 			var series = plot['file_'];
 			var labels = plot['colorsMap_'];
 
-				var annotations = [];
+			var annotations = [];
 
-				var i = 0, k, date;
+			var i = 0, k, date;
 
-				var min = [];
-				var minDate = [];
+			var min = [];
+			var minDate = [];
 
-				var max = [];
-				var maxDate = [];
+			var max = [];
+			var maxDate = [];
 
-				$(series).each(function(i, data){
-					$(data).each(function(x, value){
-						if (0 === x) {
-							date = value;
-							return;
-						}
-						if (_.isNaN(value)) {
-							return;
-						}
-						k = x-1;
-						if (_.isUndefined(max[k]) || max[k] < value) {
-							max[k] = value;
-							maxDate[k] = date;
-						}
-						if (_.isUndefined(min[k]) || min[k] > value) {
-							min[k] = value;
-							minDate[k] = date;
-						}
-					});
+			$(series).each(function(i, data){
+				$(data).each(function(x, value){
+					if (0 === x) {
+						date = value;
+						return;
+					}
+					if (_.isNaN(value)) {
+						return;
+					}
+					k = x-1;
+					if (_.isUndefined(max[k]) || max[k] < value) {
+						max[k] = value;
+						maxDate[k] = date;
+					}
+					if (_.isUndefined(min[k]) || min[k] > value) {
+						min[k] = value;
+						minDate[k] = date;
+					}
 				});
+			});
 
-				$(_.keys(labels)).each(function(i, name){
-					annotations.push({
-						series: name,
-						x: minDate[i].getTime(),
-						shortText: 'L',
-						text: 'Min: ' + min[i]
-					});
-					annotations.push({
-						series: name,
-						x: maxDate[i].getTime(),
-						shortText: 'H',
-						text: 'Max: ' + max[i]
-					});
+			$(_.keys(labels)).each(function(i, name){
+				annotations.push({
+					series: name,
+					x: minDate[i],
+					shortText: 'L',
+					text: 'Min: ' + min[i]
 				});
+				annotations.push({
+					series: name,
+					x: maxDate[i],
+					shortText: 'H',
+					text: 'Max: ' + max[i]
+				});
+			});
 
 
-				plot.setAnnotations(annotations);
+			plot.setAnnotations(annotations);
 		},
 
 		unzoom: function(){

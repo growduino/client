@@ -126,3 +126,8 @@ form label {
 .dygraph-legend {
 
 }
+
+/* misc */
+.lft {float: left;}
+.rgt {float: right;}
+.clr {clear:both;}
