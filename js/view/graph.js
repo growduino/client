@@ -65,6 +65,8 @@ function(Configurable, Persistable, Dygraph){
 		 * Draws graph.
 		 */
 		draw: function(options){
+			var self = this;
+
 			var meta = _.defaults(options || {}, this.meta);
 			var data = this.data;
 			var element = this.$el.find('#'.concat(this.cid)+' .graph-body').get(0)
@@ -75,21 +77,18 @@ function(Configurable, Persistable, Dygraph){
 				meta
 			);
 
-			var self = this;
 			this.plot.ready(function(){
-				self.setAnnotations(self.plot);
+				self.setAnnotations.call(self);
 			});
 
 			return this;
 		},
 
-		setAnnotations: function(plot){
+		setAnnotations: function(){
+			var plot = this.plot;
+
 			var series = plot['file_'];
 			var labels = plot['colorsMap_'];
-
-			var annotations = [];
-
-			var i = 0, k, date;
 
 			var min = [];
 			var minDate = [];
@@ -97,16 +96,28 @@ function(Configurable, Persistable, Dygraph){
 			var max = [];
 			var maxDate = [];
 
-			$(series).each(function(i, data){
-				$(data).each(function(x, value){
-					if (0 === x) {
+			var d, k, date;
+
+			$(series).each(function(x, data){
+				$(data).each(function(i, value){
+					if (0 === i) {
 						date = value;
 						return;
+
+//						d = value;
+//						date = d.getFullYear().toString()
+//								.concat('/', (d.getMonth() + 1 < 10 ? '0' : '').concat(d.getMonth() + 1))
+//								.concat('/', (d.getDate() < 10 ? '0' : '').concat(d.getDate()))
+//								.concat(' ', (d.getHours() < 10 ? '0' : '').concat(d.getHours()))
+//								.concat(':', (d.getMinutes() < 10 ? '0' : '').concat(d.getMinutes()), ':')
+//						return;
 					}
+
 					if (_.isNaN(value)) {
 						return;
 					}
-					k = x-1;
+
+					k = i-1;
 					if (_.isUndefined(max[k]) || max[k] < value) {
 						max[k] = value;
 						maxDate[k] = date;
@@ -118,6 +129,7 @@ function(Configurable, Persistable, Dygraph){
 				});
 			});
 
+			var annotations = plot.annotations();
 			$(_.keys(labels)).each(function(i, name){
 				annotations.push({
 					series: name,
@@ -132,7 +144,6 @@ function(Configurable, Persistable, Dygraph){
 					text: 'Max: ' + max[i]
 				});
 			});
-
 
 			plot.setAnnotations(annotations);
 		},
