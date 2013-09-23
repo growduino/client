@@ -11,14 +11,39 @@ define(['util/mx-base', 'underscore', 'backbone', 'localstorage'], function(Base
 		/** @var {String} */
 		this.storageName = null;
 
+		/**
+		 * @param {Array|Object}
+		 * @return {Array}
+		 */
+		this.defaultSerializer = function(items) {
+			var serialized = [];
+			var item;
+
+			$(items).each(function(k, v){
+				item = _.clone(v);
+				item[0] = v[0].toString();
+				serialized[k] = item;
+			});
+
+			return serialized;
+		};
+
+		/**
+		 * @param {Array}
+		 * @return {Array}
+		 */
+		this.defaultDeserializer = function(items) {
+			// @todo ?
+			return items;
+		};
+
 
 		/**
 		 * Storage getter.
 		 *
 		 * @return {Backbone.LocalStorage} storage
 		 */
-		this.getStore = function()
-		{
+		this.getStore = function() {
 			if (_.isEmpty(this.storage)) {
 				throw 'Invalid state: Storage is not set for the entity. Use this.setStore(name) instead.';
 			}
@@ -41,7 +66,7 @@ define(['util/mx-base', 'underscore', 'backbone', 'localstorage'], function(Base
 			this.storage = new Backbone.LocalStorage(name);
 
 			return this;
-		}
+		};
 
 		/**
 		 * Storage item setter.
@@ -56,6 +81,8 @@ define(['util/mx-base', 'underscore', 'backbone', 'localstorage'], function(Base
 			if (!_.isString(key)) {
 				throw 'Invalid argument: key must be a string.';
 			}
+
+			serializer = serializer || this.defaultSerializer;
 
 			if (!_.isEmpty(data)) {
 				var storage = this.getStore().localStorage();
@@ -77,6 +104,8 @@ define(['util/mx-base', 'underscore', 'backbone', 'localstorage'], function(Base
 				throw 'Invalid argument: key must be a string.';
 			}
 
+			deserializer = deserializer || this.defaultDeserializer;
+
 			var storage = this.getStore().localStorage();
 			var data = storage.getItem(key);
 
@@ -90,7 +119,7 @@ define(['util/mx-base', 'underscore', 'backbone', 'localstorage'], function(Base
 			}
 
 			return null;
-		}
+		};
 	};
 
 
