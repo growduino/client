@@ -121,6 +121,8 @@ function(Configurable, Persistable, Log, Graph, Form){
 					throw 'Timestamp missing';
 				}
 
+				// console.log(ts);
+
 				if (x[0].min) {
 					date = self.Time.getDate(ts) + ' ' + self.Time.getHour(ts) + ':' + self.Time.getMinute(ts);
 					data = x[0].min;
@@ -141,7 +143,7 @@ function(Configurable, Persistable, Log, Graph, Form){
 					self.dataTypes.shift('Time');
 				}
 
-				series.push(self['get' + self.dataTypes[i] + 'Data'](data, date));
+				series.push(self['get' + self.dataTypes[i] + 'Data'](data.reverse() /* olol timestamp fix */, date));
 			});
 
 			this.data = this.getCombinedData.apply(this, series);
