@@ -259,7 +259,7 @@ function(Configurable, Persistable, Log, Graph, Form){
 		App.getLightData = function(rawData, baseDate){
 			return this.getDataSeries(rawData, baseDate, function(val, precise){
 				// sanitizer:
-				if (precise || false) {
+				if (precise || true) {
 					// precise
 					return (val === -999) ? NaN : Math.round(val/10, 1);
 				}
@@ -446,8 +446,8 @@ function(Configurable, Persistable, Log, Graph, Form){
 			var url = this.option('baseUrl') + this.option('outputConfigFile');
 
 			$.ajax({
-				type: 'GET',
 				url: url,
+				type: 'GET',
 				dataType: 'text'
 			})
 			.done(function(data){
@@ -469,11 +469,12 @@ function(Configurable, Persistable, Log, Graph, Form){
 		App.inputFormSubmit = function($form){
 		try {
 			var app = this;
+			var url = this.option('baseUrl') + this.option('inputConfigFile');
 			var data = $form.getValues();
 
 			$.ajax({
+				url: url,
 				type: 'POST',
-				url: '/save',
 				data: data.inputs
 			})
 			.done(function(){
@@ -533,7 +534,7 @@ function(Configurable, Persistable, Log, Graph, Form){
 			$.ajax({
 				url: url,
 				type: 'POST',
-				data: data
+				data: JSON.stringify(data)
 			})
 			.done(function(){
 				$form.reset();
@@ -692,7 +693,7 @@ function(Configurable, Persistable, Log, Graph, Form){
 			if ($form) $form.loading(true);
 
 			var sources = [];
-			var basePath = 'sensors/';
+			var basePath = this.option('baseUrl').concat('sensors/');
 
 			try {
 
@@ -740,7 +741,7 @@ function(Configurable, Persistable, Log, Graph, Form){
 			var types = _.rest(this.dataTypes);
 			var paths = this.dataPaths;
 
-			var basePath = 'data/';
+			var basePath = this.option('baseUrl').concat('data/');
 			var dayData = {};
 			var pass = false;
 			var type, path;
@@ -812,7 +813,7 @@ function(Configurable, Persistable, Log, Graph, Form){
 			var types = _.rest(this.dataTypes);
 			var paths = this.dataPaths;
 
-			var basePath = 'data/';
+			var basePath = this.option('baseUrl').concat('data/');
 			var currPath = '';
 			var baseDate;
 
@@ -898,7 +899,7 @@ function(Configurable, Persistable, Log, Graph, Form){
 			var types = _.rest(this.dataTypes);
 			var paths = this.dataPaths;
 
-			var basePath = 'data/';
+			var basePath = this.option('baseUrl').concat('data/');
 			var currPath = '';
 			var baseDate;
 
