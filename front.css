@@ -11,6 +11,8 @@ html, body {
 #top {
 	margin: 25px auto;
 	width: 960px;
+
+	text-align: left;
 }
 
 #main {
@@ -68,7 +70,7 @@ html, body {
 .log-message {
 	padding: 2px;
 	text-align: left;
-	font-size: 1em;
+	font-size: 0.90em;
 	line-height: 1em;
 }
 .log-message:hover {
@@ -117,9 +119,10 @@ form table tr {
 }
 form table tr th {
 	vertical-align: top;
+	font-weight: normal;
 }
 form table tr th.caption {
-	background: #99e;
+
 }
 form table tr td {
 
@@ -127,6 +130,17 @@ form table tr td {
 
 form label {
 	padding-left: 5px; padding-right: 5px;
+}
+
+form.component {
+	display: inline-block;
+	vertical-align: top;
+	border: 1px solid #ccc;
+}
+
+form .caption {
+	font-weight: bold;
+	background: #99e;
 }
 
 /* graphs */

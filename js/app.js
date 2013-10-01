@@ -10,7 +10,11 @@ function(Configurable, Persistable, Log, Graph, Form){
 		App.NAME = 'GrowduinoClientApp';
 
 		App.defaultOptions = {
-			inputConfig: 'vstup.jso',
+			baseUrl: '/growduino/',	// local
+			configFile: 'config.jso',
+			inputConfigFile: 'vstup.jso',
+			outputConfigFile: 'vystup.jso',
+
 			cacheNamespace: 'app-cache'
 		};
 
@@ -39,7 +43,7 @@ function(Configurable, Persistable, Log, Graph, Form){
 			this.cache.setStore(this.option('cacheNamespace'));
 
 			// load config
-			this.handleLoadConfig(this.option('inputConfig'))
+			this.handleLoadConfig(this.option('inputConfigFile'))
 				// load last sensor data
 				.done(function(){
 					return app.handleLoadFreshData();
@@ -47,7 +51,6 @@ function(Configurable, Persistable, Log, Graph, Form){
 
 			// input form
 			var $inputForm = this.getComponent('inputForm');
-				$inputForm.$el.off();
 				$inputForm.$el.on('click', '[name=load]', function(evt){
 					evt.preventDefault();
 					app['inputFormLoad'].call(app, $inputForm);
@@ -56,29 +59,24 @@ function(Configurable, Persistable, Log, Graph, Form){
 					evt.preventDefault();
 					app['inputFormSubmit'].call(app, $inputForm);
 				});
+				$inputForm.$el.addClass('component');
 				$inputForm.render($('#top'));
+
+			// config form
+			var $configForm = this.getComponent('configForm');
+				$configForm.delegateEvents({
+					'click [name=save]': function(evt){
+						evt.preventDefault();
+						app['configFormSave'].call(app, $configForm);
+					}
+				});
+				$configForm.$el.addClass('component');
+				$configForm.render($('#top'));
 
 			return this;
 		};
 
-		/** @experimental */
-		App.translate = function(items, dict){
-			// single item
-			if (_.isString(items)) {
-				return _.isUndefined(dict[items]) ? null : dict[items];
-			}
 
-			// moar items
-			var output = {};
-
-			$(items).each(function(i, item){
-				if (_.contains(_.keys(dict), item)) {
-					output[item] = dict[item];
-				}
-			});
-
-			return output;
-		}
 
 		/**
 		 * Data loader.
@@ -89,7 +87,7 @@ function(Configurable, Persistable, Log, Graph, Form){
 		App.loadData = function(sources){
 			var app = this;
 
-			var Worker = $.when.apply(this, sources);
+			var Worker = ($.when).apply(this, sources);
 				Worker
 					.done($.proxy(this.onDataLoaded, this))
 					.fail($.proxy(this.onDataFailed, this))
@@ -108,42 +106,44 @@ function(Configurable, Persistable, Log, Graph, Form){
 				throw 'Recieved no data';
 			}
 
-			var self = this;
+			var app = this;
 			var series = [];
-			var ts, date, data;
+			var tx, ts, date, data;
 
 			$(arguments).each(function(i, x){
-				// sniff for keys: "time, name, min, h, day"
-				if (x[0].time) {
-					ts = new Date(x[0].time * 1000);
-				}
-				else {
-					throw 'Timestamp missing';
-				}
-
-				// console.log(ts);
+				// sniff for keys: name, min, h, day"
+				tx = app.Time.now();
 
 				if (x[0].min) {
-					date = self.Time.getDate(ts) + ' ' + self.Time.getHour(ts) + ':' + self.Time.getMinute(ts);
 					data = x[0].min;
+					tx  -= data.length * app.Time.MINUTE;
+					ts   = new Date(tx);
+					date = app.Time.getDate(ts) + ' ' + app.Time.getHour(ts) + ':' + app.Time.getMinute(ts);
+
 				}
 				else if (x[0].h) {
-					date = self.Time.getDate(ts) + ' ' + self.Time.getHour(ts);
 					data = x[0].h;
+					tx  -= data.length * app.Time.HOUR;
+					ts   = new Date(tx);
+					date = app.Time.getDate(ts) + ' ' + app.Time.getHour(ts);
+
 				}
 				else if (x[0].day) {
-					date = self.Time.getDate(ts);
 					data = x[0].day;
+					tx  -= data.length * app.Time.DAY;
+					ts   = new Date(tx);
+					date = app.Time.getDate(ts);
+
 				}
 				else {
 					throw 'Unexpected data series identifier';
 				}
 
-				if (_.contains(self.dataTypes, 'Time')) {
-					self.dataTypes.shift('Time');
+				if (_.contains(app.dataTypes, 'Time')) {
+					app.dataTypes.shift('Time');
 				}
 
-				series.push(self['get' + self.dataTypes[i] + 'Data'](data.reverse() /* olol timestamp fix */, date));
+				series.push(app['get' + app.dataTypes[i] + 'Data'](data, date));
 			});
 
 			this.data = this.getCombinedData.apply(this, series);
@@ -196,12 +196,11 @@ function(Configurable, Persistable, Log, Graph, Form){
 
 			var $graph = this.getComponent(graphName || 'mainGraph');
 
-			// @todo render()
-			if (!$graph.started) {
-				$graph.start($('#main'), {
-					'title': this.dataTypes.join('-')
-				});
+			if (!$graph.rendered) {
+				$graph.render($('#main'));
 			}
+
+			$graph.updateTitle(this.dataTypes.join('-'));
 
 			if (!_.contains(this.dataTypes, 'Time')) {
 				this.dataTypes.unshift('Time');
@@ -251,26 +250,28 @@ function(Configurable, Persistable, Log, Graph, Form){
 		};
 
 		/**
-		 * Data parser shortcut (light).
+		 * Data parser shortcut (light sanitizer).
 		 *
 		 * @param {Array} rawData
 		 * @param {String} baseDate
 		 * @return {Array}
 		 */
 		App.getLightData = function(rawData, baseDate){
-			return this.getDataSeries(rawData, baseDate, function(val){
-				// sanitizer
-
-				// on-off
-//				return (val === -999) ? NaN : 100;
-
-				// precise
-				return (val === -999) ? NaN : Math.round(val/10, 1);
+			return this.getDataSeries(rawData, baseDate, function(val, precise){
+				// sanitizer:
+				if (precise || false) {
+					// precise
+					return (val === -999) ? NaN : Math.round(val/10, 1);
+				}
+				else {
+					// on-off
+					return (val === -999) ? NaN : 100;
+				}
 			});
 		};
 
 		/**
-		 * Data parser shortcut (temperature).
+		 * Data parser shortcut (temperature sanitizer).
 		 *
 		 * @param {Array} rawData
 		 * @param {String} baseDate
@@ -284,7 +285,7 @@ function(Configurable, Persistable, Log, Graph, Form){
 		};
 
 		/**
-		 * Data parser shortcut (humidity).
+		 * Data parser shortcut (humidity sanitizer).
 		 *
 		 * @param {Array} rawData
 		 * @param {String} baseDate
@@ -424,7 +425,7 @@ function(Configurable, Persistable, Log, Graph, Form){
 		App.createInputForm = function(name){
 			var form = new Form();
 				form.setName(name || 'inputForm');
-				form.setCaption('Pins');
+				form.setCaption('Pins', true);
 
 				form.addTextArea('inputs', 'data', {
 					cols: 50,
@@ -440,12 +441,13 @@ function(Configurable, Persistable, Log, Graph, Form){
 		 * @param {Backbone.View} $form
 		 */
 		App.inputFormLoad = function($form){
-			try {
+		try {
 			var app = this;
+			var url = this.option('baseUrl') + this.option('outputConfigFile');
 
 			$.ajax({
 				type: 'GET',
-				url: 'vystup.jso',
+				url: url,
 				dataType: 'text'
 			})
 			.done(function(data){
@@ -456,16 +458,16 @@ function(Configurable, Persistable, Log, Graph, Form){
 			.fail(function(response, status, error){
 				app.logger.show($form.getName() + ': ' + error.message, app.logger.ERROR);
 			});
-			} catch (e) {
+		} catch (e) {
 				//console.log(e.message);
-			}
+		}
 		};
 
 		/**
 		 * @param {Backbone.View} $form
 		 */
 		App.inputFormSubmit = function($form){
-			try {
+		try {
 			var app = this;
 			var data = $form.getValues();
 
@@ -479,11 +481,71 @@ function(Configurable, Persistable, Log, Graph, Form){
 				app.logger.show($form.getName() + ': Data saved', app.logger.SUCCESS);
 			})
 			.fail(function(response, status, error){
-				app.logger.show($form.getName() + ': ' + error.message, app.logger.ERROR);
+				console.log(arguments);
+				app.logger.show($form.getName() + ' ' + status + ': ' + error, app.logger.ERROR);
 			});
-			} catch (e) {
-				//console.log(e.message);
-			}
+		} catch (e) {
+			//console.log(e.message);
+		}
+		};
+
+		/**
+		 * @param {String} name
+		 * @return {Backbone.View}
+		 */
+		App.createConfigForm = function(name){
+			var form = new Form();
+				form.setName(name || 'configForm');
+				form.setCaption('Config', true);
+
+			var app = this;
+			var url = this.option('baseUrl') + this.option('configFile');
+
+			$.ajax({
+				url: url,
+				type: 'GET',
+				dataType: 'json',
+				async: false,
+				success: function(data){
+					// dynamic fields
+					for (var name in data) {
+						form.addText(name);
+					}
+					form.setValues(data);
+				},
+				error: function(){
+					app.logger.show('Failed to fetch config file: ' + url, app.logger.ERROR);
+				}
+			});
+
+			form.addSubmit('save');
+
+			return form;
+		};
+
+		App.configFormSave = function($form){
+		try {
+			var app = this;
+			var url = this.option('baseUrl') + this.option('configFile');
+			var data = $form.getValues();
+				delete(data.save);	// @todo values exclude buttons?
+
+			$.ajax({
+				url: url,
+				type: 'POST',
+				data: data
+			})
+			.done(function(){
+				$form.reset();
+				app.logger.show($form.getName() + ': Data saved', app.logger.SUCCESS);
+			})
+			.fail(function(response, status, error){
+//				console.log(arguments);
+				app.logger.show($form.getName() + ' ' + status + ': ' + error, app.logger.ERROR);
+			});
+		} catch (e) {
+			//console.log(e.message);
+		}
 		};
 
 		/**
@@ -515,17 +577,7 @@ function(Configurable, Persistable, Log, Graph, Form){
 				form.addSubmit('load', 'Load');
 				form.addButton('unzoom', 'Reset view').hide();	// @todo plot event handler
 
-				form.setRenderer(function(){
-					// all-in-line
-					var $wrap = $('<div>');
-
-					$(_.values(this.part[this.cid])).each(function(i, part){
-						$wrap.append(part.$label || null);
-						$wrap.append(part.$input);
-					});
-
-					return $wrap;
-				});
+				form.setRenderer(form.allInLineRenderer);
 
 			return form;
 		};
@@ -569,7 +621,7 @@ function(Configurable, Persistable, Log, Graph, Form){
 				form.addButton('fresh', 'Fresh');
 
 				form.setRenderer(function(){
-					// all-in-line
+					// all-in-line no caption
 					var $wrap = $('<div>');
 
 					$wrap.append($('<small>').text(this.getCaption()));
@@ -591,11 +643,12 @@ function(Configurable, Persistable, Log, Graph, Form){
 		 */
 		App.handleLoadConfig = function(file){
 			var app = this;
+			var url = this.option('baseUrl') + file;
 
 			try {
 
 			var Worker = $.when($.ajax({
-				url: file,
+				url: url,
 				dataType: 'json',
 				async: false
 			}));
@@ -605,7 +658,7 @@ function(Configurable, Persistable, Log, Graph, Form){
 			}
 
 			Worker.done(function(inputs){
-				app.logger.show('Fetched local config file: ' + file);
+				app.logger.show('Fetched config file: ' + file);
 
 				var sourceTypes = app.translate(_.values(inputs), {
 					'humidity': 'Humidity',
@@ -913,6 +966,16 @@ function(Configurable, Persistable, Log, Graph, Form){
 
 		// Datetime helper
 		App.Time = {
+			DAY: 86400000,
+			HOUR: 3600000,
+			MINUTE: 60000,
+			SECOND:  1000,
+
+			now: function(object){
+				var ts = new Date();
+				return _.isUndefined(object) ? ts.getTime() : ts;
+			},
+
 			getCurrentYear: function(){
 				var y = (new Date()).getFullYear();
 				return y.toString();
@@ -962,9 +1025,11 @@ function(Configurable, Persistable, Log, Graph, Form){
 				return (m < 10 ? '0' : '').concat(m);
 			},
 			getDate: function(date){
+				date = date || new Date();
 				return this.getYear(date) + '/' + this.getMonth(date) + '/' + this.getDay(date);
 			},
 			getDatetime: function(date){
+				date = date || new Date();
 				return this.getDate(date) + ' ' + this.getHour(date) + ':' + this.getMinute(date);
 			},
 			/**
@@ -987,26 +1052,26 @@ function(Configurable, Persistable, Log, Graph, Form){
 				return date;
 			},
 			/**
-			 * @param {String} time '1 minute'
+			 * @param {String} time '1 minute|2 hour|7 day'
 			 * @param {Date} date [optional]
 			 * @return {Date}
 			 */
 			add: function(time, date){
-				var tx = time.match(/(\d+)?\s?([a-z]+)/i);
+				var tx = time.match(/([+-]+\d+)?\s?([a-z]+)/i);
 				var ts = (date || new Date()).getTime();
 
 				switch (tx[2]) {
 					case 'second':
-						ts += 1000 * (tx[1] || 1);
+						ts += (tx[1] || 1) * this.SECOND;
 					break;
 					case 'minute':
-						ts += 60000 * (tx[1] || 1);
+						ts += (tx[1] || 1) * this.MINUTE;
 					break;
 					case 'hour':
-						ts += 3600000 * (tx[1] || 1);
+						ts += (tx[1] || 1) * this.HOUR;
 					break;
 					case 'day':
-						ts += 86400000 * (tx[1] || 1);
+						ts += (tx[1] || 1) * this.DAY;
 					break;
 					default:
 						throw 'Value doesnt match: ' + time.toString();
@@ -1015,6 +1080,25 @@ function(Configurable, Persistable, Log, Graph, Form){
 
 				return new Date(ts);
 			}
+		};
+
+		/** @experimental */
+		App.translate = function(items, dict){
+			// single item
+			if (_.isString(items)) {
+				return _.isUndefined(dict[items]) ? null : dict[items];
+			}
+
+			// moar items
+			var output = {};
+
+			$(items).each(function(i, item){
+				if (_.contains(_.keys(dict), item)) {
+					output[item] = dict[item];
+				}
+			});
+
+			return output;
 		};
 
 
