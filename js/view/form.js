@@ -18,7 +18,7 @@ define(['underscore', 'backbone'], function(){
 		 */
 		render: function(parent){
 			this.$el.attr({
-				id: this.name
+				'id': this.name
 			});
 
 			var $body = (this.getRenderer()).call(this);
@@ -55,6 +55,8 @@ define(['underscore', 'backbone'], function(){
 
 		/** @var {String|null} */
 		caption: null,
+		/** @var {Boolean} */
+		captionToggle: false,
 		/** @return {String|null} */
 		getCaption: function(){
 			return this.caption;
@@ -62,8 +64,9 @@ define(['underscore', 'backbone'], function(){
 		/** @param {String} text
 		 * @return {Backbone.View}
 		 */
-		setCaption: function(text){
+		setCaption: function(text, toggle){
 			this.caption = text;
+			this.captionToggle = !!toggle;
 			return this;
 		},
 
@@ -142,8 +145,6 @@ define(['underscore', 'backbone'], function(){
 				} else {
 					$input.val(value);
 				}
-
-				return this;
 			});
 
 			return this;
@@ -294,6 +295,8 @@ define(['underscore', 'backbone'], function(){
 		},
 
 		/** Method for rendering parts
+		 *	Renders to table
+		 *
 		 * @return {Function}
 		 */
 		defaultRenderer: function(){
@@ -303,7 +306,7 @@ define(['underscore', 'backbone'], function(){
 
 			var $table = $('<table>');
 
-			if (_.isString(this.caption)) {
+			if (this.caption) {
 				var $caption = $('<tr>');
 					$caption.append($('<th>').attr({
 						'colspan': 2,
@@ -328,9 +331,50 @@ define(['underscore', 'backbone'], function(){
 				$table.append($row);
 			});
 
+			if ($caption && this.captionToggle) {
+				$caption.css('cursor', 'pointer');
+				$caption.click(function(evt){
+					$caption.nextAll().toggle();
+				});
+			}
+
 			this.$el.append($table);
 
 			return $table;
+		},
+
+		/**
+		 * All-in-Line renderer
+		 *
+		 * @return {Object} jQ element
+		 */
+		allInLineRenderer: function(){
+			// all-in-line
+			var $wrap = $('<div>');
+
+			if (!_.isEmpty(this.caption)) {
+				var $caption = $('<span>', {
+					'colspan': 2,
+					'class': 'caption'
+				}).html(this.caption);
+
+				$wrap.append($caption);
+
+				if (this.captionToggle) {
+					$caption.css('cursor', 'pointer');
+
+					$caption.click(function(){
+						$caption.nextAll().toggle();
+					});
+				}
+			}
+
+			$(_.values(this.part[this.cid])).each(function(i, part){
+				$wrap.append(part.$label || null);
+				$wrap.append(part.$input);
+			});
+
+			return $wrap;
 		},
 
 		/**
