@@ -9,7 +9,7 @@ function(Configurable, Persistable, Dygraph){
 			'templateSelector': '#graph',
 			'styles': {
 				'wrapper' : {
-					border: '1px solid red'
+					'border': '1px solid red'
 				}
 			}
 		},
@@ -18,10 +18,13 @@ function(Configurable, Persistable, Dygraph){
 		data: [],
 		/** @var {Object} dygraph data options */
 		meta: {},
+
+		/** @var {Object} jQ element */
+		$graph: null,
 		/** @var {Object} dygraph plot */
 		plot: null,
 
-		start: function($el, options){
+		render: function($el, options){
 			this.$el = $el;
 			this.config(_.defaults(options || {}, this.defaultOptions));
 
@@ -35,16 +38,24 @@ function(Configurable, Persistable, Dygraph){
 			}
 
 			var template = _.template($graphTemplate.html());
-			var $graph = $(template({
+
+			this.$graph = $(template({
 				'title': this.option('title'),
 				'id': this.cid
 			})).removeClass('template');
 
-			this.$el.prepend($graph);
+			this.$el.prepend(this.$graph);
 
-			this.started = true;
+			this.rendered = true;
 
 			return this;
+		},
+
+		/**
+		 * @param {String} contents Graph caption
+		 */
+		updateTitle: function(contents){
+			this.$graph.find('.graph-title').html(contents);
 		},
 
 		setData: function(data, meta){
