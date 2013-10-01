@@ -18,7 +18,11 @@ define(['util/mx-base', 'underscore'], function(Base){
 				throw 'Invalid argument: "key" must be string';
 			}
 
-			return (this.options[key] || (def || null));
+			if (_.isUndefined(this.options[key])) {
+				return def || null;
+			}
+
+			return this.options[key];
 		};
 
 		/**
@@ -29,8 +33,6 @@ define(['util/mx-base', 'underscore'], function(Base){
 		 * @return {Object} fluent
 		 */
 		this.config = function(keys, vals) {
-			vals = vals || null;
-
 			var option, value;
 
 			if (_.isObject(keys) || _.isArray(keys)) {
@@ -45,8 +47,8 @@ define(['util/mx-base', 'underscore'], function(Base){
 						throw 'Invalid state: option key must be either string or number';
 					}
 				}
-			} else
-			if (_.isString(keys) && !_.isNull(vals)) {
+			}
+			else if (_.isString(keys) && !_.isUndefined(vals)) {
 				// set single option
 				option = keys;
 				value = vals;
