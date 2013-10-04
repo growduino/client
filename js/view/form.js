@@ -7,6 +7,9 @@ define(['underscore', 'backbone'], function(){
 		/** @var {String} */
 		tagName: 'form',
 
+		/** @var {Object} */
+		events: {},
+
 		initialize: function(){
 			// @wtf property overload bug: namespace introduced
 			this.part[this.cid] = {};
@@ -14,7 +17,7 @@ define(['underscore', 'backbone'], function(){
 
 		/**
 		 * @param {HTMLElement} parent
-		 * @return {Object} jQ form
+		 * @return {Backbone.View} fluent
 		 */
 		render: function(parent){
 			this.$el.attr({
@@ -27,6 +30,20 @@ define(['underscore', 'backbone'], function(){
 
 			if (_.isElement(parent) || _.isObject(parent)) {
 				$(parent).append(this.$el);
+			}
+
+			return this;
+		},
+
+		/**
+		 * Add delegated events
+		 * @param {Object} events
+		 * @return {Backbone.View} fluent
+		 */
+		addEvents: function(events) {
+			if (_.isObject(events)) {
+				events = _.extend(this.events, events);
+				this.delegateEvents(events);
 			}
 
 			return this;
@@ -47,6 +64,8 @@ define(['underscore', 'backbone'], function(){
 			}
 
 			$trs.toggle();
+
+			return this;
 		},
 
 		/** @var {String|null} */
@@ -96,7 +115,7 @@ define(['underscore', 'backbone'], function(){
 
 			if (this.captionToggle) {
 				$caption.css('cursor', 'pointer');
-				this.delegateEvents({
+				this.addEvents({
 					'click .caption': this.toggleMode
 				});
 			}

@@ -56,9 +56,7 @@ html, body {
 	background: #eee;
 
 }
-.graph-controls label {
-	font-size: 80%;
-}
+.graph-controls label {}
 
 #log {
 	margin: 25px auto;
@@ -130,6 +128,7 @@ form table tr td {
 
 form label {
 	padding-left: 5px; padding-right: 5px;
+	font-size: 80%;
 }
 
 form.component {

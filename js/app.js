@@ -10,7 +10,8 @@ function(Configurable, Persistable, Log, Graph, Form){
 		App.NAME = 'GrowduinoClientApp';
 
 		App.defaultOptions = {
-			baseUrl: '/growduino/',	// local
+			baseUrl: 'http://arduino.natur.cuni.cz/',	// remote
+//			baseUrl: '/growduino/',	// local
 			configFile: 'config.jso',
 			inputConfigFile: 'vstup.jso',
 			outputConfigFile: 'vystup.jso',
@@ -49,28 +50,31 @@ function(Configurable, Persistable, Log, Graph, Form){
 					return app.handleLoadFreshData();
 				});
 
-			// output form (pins)
-			var $outputForm = this.getComponent('outputForm');
-				$outputForm.delegateEvents({
-					'click [name=save]': function(evt){
-						evt.preventDefault();
-						app['outputFormSave'].call(app, $outputForm);
-					}
-				});
-				$outputForm.$el.addClass('component');
-				$outputForm.render($('#top')).toggleMode();
-
 			// config form
 			var $configForm = this.getComponent('configForm');
-				$configForm.delegateEvents({
+				$configForm.addEvents({
 					'click [name=save]': function(evt){
 						evt.preventDefault();
-						app['configFormSave'].call(app, $configForm);
+						app['processConfigForm'].call(app, $configForm);
 					}
 				});
 				$configForm.$el.addClass('component');
 				$configForm.render($('#top')).toggleMode();
 
+
+			// output form (pins)
+			var $outputForm = this.getComponent('outputForm');
+				$outputForm.addEvents({
+					'click [name=save]': function(evt){
+						evt.preventDefault();
+						app['processOutputForm'].call(app, $outputForm);
+					}
+				});
+				$outputForm.$el.addClass('component');
+				$outputForm.render($('#top')).toggleMode();
+
+
+			// end
 			return this;
 		};
 
@@ -215,7 +219,7 @@ function(Configurable, Persistable, Log, Graph, Form){
 				$dateForm.delegateEvents({
 					'submit': function(evt){
 						evt.preventDefault();
-						app['dateGraphControlFormSubmit'].call(app, $dateForm);
+						app['processDateGraphControlForm'].call(app, $dateForm);
 					}
 				});
 				$dateForm.$el.addClass('lft');
@@ -403,9 +407,9 @@ function(Configurable, Persistable, Log, Graph, Form){
 		App.createOutputForm = function(name){
 			var form = new Form();
 				form.setName(name || 'outputForm');
-				form.setCaption('Pins', true);
+				form.setCaption('Output', true);
 
-				form.addTextArea('inputs', 'data', {
+				form.addTextArea('output', 'DATA', {
 					cols: 50,
 					rows: 1
 				});
@@ -422,7 +426,7 @@ function(Configurable, Persistable, Log, Graph, Form){
 					async: false,
 					success: function(data){
 						form.setValues({
-							'inputs': data
+							'output': data
 						});
 					},
 					error: function(response, status, error){
@@ -436,25 +440,31 @@ function(Configurable, Persistable, Log, Graph, Form){
 		/**
 		 * @param {Backbone.View} $form
 		 */
-		App.outputFormSave = function($form){
+		App.processOutputForm = function($form){
 		try {
 			var app = this;
 			var url = this.option('baseUrl') + this.option('outputConfigFile');
 			var data = $form.getValues();
 
+			$form.loading(true);
+
 			$.ajax({
 				url: url,
 				type: 'POST',
-				data: data.inputs
-			})
-			.done(function(){
-//				$form.reset();
-				app.logger.show($form.getName() + ': Data saved', app.logger.SUCCESS);
-			})
-			.fail(function(response, status, error){
-				console.log(arguments);
-				app.logger.show($form.getName() + ' ' + status + ': ' + error, app.logger.ERROR);
+				data: data.output,
+				async: false,
+				crossDomain: true,
+				success: function(){
+	//				$form.reset();
+					app.logger.show($form.getName() + ': Data saved', app.logger.SUCCESS);
+				},
+				error: function(response, status, error){
+					console.log(arguments);
+					app.logger.show($form.getName() + ' ' + status + ': ' + error, app.logger.ERROR);
+				}
 			});
+
+			$form.loading(false);
 		} catch (e) {
 			//console.log(e.message);
 		}
@@ -467,7 +477,7 @@ function(Configurable, Persistable, Log, Graph, Form){
 		App.createConfigForm = function(name){
 			var form = new Form();
 				form.setName(name || 'configForm');
-				form.setCaption('Config', true);
+				form.setCaption('Network', true);
 
 			var app = this;
 			var url = this.option('baseUrl') + this.option('configFile');
@@ -480,7 +490,15 @@ function(Configurable, Persistable, Log, Graph, Form){
 				success: function(data){
 					// dynamic fields
 					for (var name in data) {
-						form.addText(name);
+						if (name.match('use_dhcp')) {
+							form.addSelect(name, name.toUpperCase(), {
+								'0': 'no',
+								'1': 'yes'
+							});
+						}
+						else {
+							form.addText(name, name.toUpperCase());
+						}
 					}
 					form.setValues(data);
 				},
@@ -494,26 +512,32 @@ function(Configurable, Persistable, Log, Graph, Form){
 			return form;
 		};
 
-		App.configFormSave = function($form){
+		App.processConfigForm = function($form){
 		try {
 			var app = this;
 			var url = this.option('baseUrl') + this.option('configFile');
 			var data = $form.getValues();
 				delete(data.save);	// @todo values exclude buttons?
 
+			$form.loading(true);
+
 			$.ajax({
 				url: url,
 				type: 'POST',
-				data: JSON.stringify(data)
-			})
-			.done(function(){
-//				$form.reset();
-				app.logger.show($form.getName() + ': Data saved', app.logger.SUCCESS);
-			})
-			.fail(function(response, status, error){
-//				console.log(arguments);
-				app.logger.show($form.getName() + ' ' + status + ': ' + error, app.logger.ERROR);
+				data: JSON.stringify(data),
+				async: false,
+				crossDomain: true,
+				success: function(){
+//					$form.reset();
+					app.logger.show($form.getName() + ': Data saved', app.logger.SUCCESS);
+				},
+				error: function(response, status, error){
+//					console.log(arguments);
+					app.logger.show($form.getName() + ' ' + status + ': ' + error, app.logger.ERROR);
+				}
 			});
+
+			$form.loading(false);
 		} catch (e) {
 			//console.log(e.message);
 		}
@@ -556,7 +580,7 @@ function(Configurable, Persistable, Log, Graph, Form){
 		/**
 		 * @param {Backbone.View} $form
 		 */
-		App.dateGraphControlFormSubmit = function($form){
+		App.processDateGraphControlForm = function($form){
 			var vals = $form.getValues();
 
 			if (vals.year && !parseInt(vals.month)) {
@@ -629,7 +653,7 @@ function(Configurable, Persistable, Log, Graph, Form){
 			}
 
 			Worker.done(function(inputs){
-				app.logger.show('Fetched config file: ' + file);
+				app.logger.show('Fetched config file: ' + url);
 
 				var sourceTypes = app.translate(_.values(inputs), {
 					'humidity': 'Humidity',
