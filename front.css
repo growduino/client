@@ -122,7 +122,7 @@ form table tr th {
 	font-weight: normal;
 }
 form table tr th.caption {
-
+	padding: 3px 5px;
 }
 form table tr td {
 

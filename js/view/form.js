@@ -69,6 +69,26 @@ define(['underscore', 'backbone'], function(){
 			this.captionToggle = !!toggle;
 			return this;
 		},
+		/** @return {Object} jQ element */
+		renderCaption: function(){
+			if (this.caption) {
+				var $caption = $('<tr>');
+					$caption.append($('<th>').attr({
+						'colspan': 2,
+						'class': 'caption'
+					}).html(this.caption));
+			}
+			if (this.captionToggle) {
+				$caption.css('cursor', 'pointer');
+				this.delegateEvents({
+					'click .caption': function(evt){
+						$caption.nextAll().toggle();
+					}
+				});
+			}
+
+			return $caption || null;
+		},
 
 		part: {},
 		getPart: function(name){
@@ -306,15 +326,7 @@ define(['underscore', 'backbone'], function(){
 
 			var $table = $('<table>');
 
-			if (this.caption) {
-				var $caption = $('<tr>');
-					$caption.append($('<th>').attr({
-						'colspan': 2,
-						'class': 'caption'
-					}).html(this.caption));
-
-				$table.append($caption);
-			}
+			$table.append(this.renderCaption());
 
 			var $row, $th, $td;
 			$(_.values(this.part[this.cid])).each(function(name, part) {
@@ -331,13 +343,6 @@ define(['underscore', 'backbone'], function(){
 				$table.append($row);
 			});
 
-			if ($caption && this.captionToggle) {
-				$caption.css('cursor', 'pointer');
-				$caption.click(function(evt){
-					$caption.nextAll().toggle();
-				});
-			}
-
 			this.$el.append($table);
 
 			return $table;
@@ -352,22 +357,7 @@ define(['underscore', 'backbone'], function(){
 			// all-in-line
 			var $wrap = $('<div>');
 
-			if (!_.isEmpty(this.caption)) {
-				var $caption = $('<span>', {
-					'colspan': 2,
-					'class': 'caption'
-				}).html(this.caption);
-
-				$wrap.append($caption);
-
-				if (this.captionToggle) {
-					$caption.css('cursor', 'pointer');
-
-					$caption.click(function(){
-						$caption.nextAll().toggle();
-					});
-				}
-			}
+			$wrap.append(this.renderCaption());
 
 			$(_.values(this.part[this.cid])).each(function(i, part){
 				$wrap.append(part.$label || null);

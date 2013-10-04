@@ -410,7 +410,7 @@ function(Configurable, Persistable, Log, Graph, Form){
 					rows: 1
 				});
 
-				form.addSubmit('save');
+				form.addSubmit('save', 'Save');
 
 				var app = this;
 				var url = this.option('baseUrl') + this.option('outputConfigFile');
@@ -489,7 +489,7 @@ function(Configurable, Persistable, Log, Graph, Form){
 				}
 			});
 
-			form.addSubmit('save');
+			form.addSubmit('save', 'Save');
 
 			return form;
 		};
