@@ -58,7 +58,7 @@ function(Configurable, Persistable, Log, Graph, Form){
 					}
 				});
 				$outputForm.$el.addClass('component');
-				$outputForm.render($('#top'));
+				$outputForm.render($('#top')).toggleMode();
 
 			// config form
 			var $configForm = this.getComponent('configForm');
@@ -69,7 +69,7 @@ function(Configurable, Persistable, Log, Graph, Form){
 					}
 				});
 				$configForm.$el.addClass('component');
-				$configForm.render($('#top'));
+				$configForm.render($('#top')).toggleMode();
 
 			return this;
 		};

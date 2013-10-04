@@ -29,10 +29,25 @@ define(['underscore', 'backbone'], function(){
 				$(parent).append(this.$el);
 			}
 
-			return this.$el;
+			return this;
 		},
 
 		// Extensions
+
+		/** @var {Number} display mode: +1=full, -1=compact */
+		mode: +1,
+		toggleMode: function(){
+			var $trs = this.$el.find('*:has(.caption)').nextAll();
+
+			if (+1 === this.mode) {
+				this.mode = -1;
+			}
+			else if (-1 === this.mode) {
+				this.mode = +1;
+			}
+
+			$trs.toggle();
+		},
 
 		/** @var {String|null} */
 		name: null,
@@ -78,12 +93,11 @@ define(['underscore', 'backbone'], function(){
 						'class': 'caption'
 					}).html(this.caption));
 			}
+
 			if (this.captionToggle) {
 				$caption.css('cursor', 'pointer');
 				this.delegateEvents({
-					'click .caption': function(evt){
-						$caption.nextAll().toggle();
-					}
+					'click .caption': this.toggleMode
 				});
 			}
 
