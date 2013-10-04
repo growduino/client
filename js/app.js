@@ -49,18 +49,16 @@ function(Configurable, Persistable, Log, Graph, Form){
 					return app.handleLoadFreshData();
 				});
 
-			// input form
-			var $inputForm = this.getComponent('inputForm');
-				$inputForm.$el.on('click', '[name=load]', function(evt){
-					evt.preventDefault();
-					app['inputFormLoad'].call(app, $inputForm);
+			// output form (pins)
+			var $outputForm = this.getComponent('outputForm');
+				$outputForm.delegateEvents({
+					'click [name=save]': function(evt){
+						evt.preventDefault();
+						app['outputFormSave'].call(app, $outputForm);
+					}
 				});
-				$inputForm.$el.on('submit', function(evt){
-					evt.preventDefault();
-					app['inputFormSubmit'].call(app, $inputForm);
-				});
-				$inputForm.$el.addClass('component');
-				$inputForm.render($('#top'));
+				$outputForm.$el.addClass('component');
+				$outputForm.render($('#top'));
 
 			// config form
 			var $configForm = this.getComponent('configForm');
@@ -214,31 +212,27 @@ function(Configurable, Persistable, Log, Graph, Form){
 
 			// controls: custom date control
 			var $dateForm = this.getComponent('dateGraphControlForm');
-				$dateForm.$el.off();
-				$dateForm.$el.on('submit', function(evt){
-					evt.preventDefault();
-					app['dateGraphControlFormSubmit'].call(app, $dateForm);
-					return false;
+				$dateForm.delegateEvents({
+					'submit': function(evt){
+						evt.preventDefault();
+						app['dateGraphControlFormSubmit'].call(app, $dateForm);
+					}
 				});
 				$dateForm.$el.addClass('lft');
 				$dateForm.render($graph.$el.find('.graph-controls'));
 
 			// controls: button control
 			var $buttForm = this.getComponent('buttonGraphControlForm');
-				$buttForm.getPart('fresh').$input
-				.off()
-				.on('click', function(){
-					app['handleLoadFreshData'].call(app, $buttForm);
-				});
-				$buttForm.getPart('month').$input
-				.off()
-				.on('click', function(){
-					app['handleLoadMonthData'].call(app, $buttForm);
-				});
-				$buttForm.getPart('year').$input
-				.off()
-				.on('click', function(){
-					app['handleLoadYearData'].call(app, $buttForm);
+				$buttForm.delegateEvents({
+					'click [name=fresh]': function(){
+						app['handleLoadFreshData'].call(app, $buttForm);
+					},
+					'click [name=month]': function(){
+						app['handleLoadMonthData'].call(app, $buttForm);
+					},
+					'click [name=year]': function(){
+						app['handleLoadYearData'].call(app, $buttForm);
+					}
 				});
 				$buttForm.$el.addClass('rgt');
 				$buttForm.render($graph.$el.find('.graph-controls'));
@@ -257,17 +251,7 @@ function(Configurable, Persistable, Log, Graph, Form){
 		 * @return {Array}
 		 */
 		App.getLightData = function(rawData, baseDate){
-			return this.getDataSeries(rawData, baseDate, function(val, precise){
-				// sanitizer:
-				if (precise || true) {
-					// precise
-					return (val === -999) ? NaN : Math.round(val/10, 1);
-				}
-				else {
-					// on-off
-					return (val === -999) ? NaN : 100;
-				}
-			});
+			return this.getDataSeries(rawData, baseDate, this.Data.decadicSanitizer);
 		};
 
 		/**
@@ -278,10 +262,7 @@ function(Configurable, Persistable, Log, Graph, Form){
 		 * @return {Array}
 		 */
 		App.getTemperatureData = function(rawData, baseDate){
-			return this.getDataSeries(rawData, baseDate, function(val){
-				// sanitizer
-				return (val < 0) ? NaN : val / 10;
-			});
+			return this.getDataSeries(rawData, baseDate, this.Data.decadicSanitizer);
 		};
 
 		/**
@@ -292,10 +273,7 @@ function(Configurable, Persistable, Log, Graph, Form){
 		 * @return {Array}
 		 */
 		App.getHumidityData = function(rawData, baseDate){
-			return this.getDataSeries(rawData, baseDate, function(val){
-				// sanitizer
-				return (val < 0) ? NaN : val / 10;
-			});
+			return this.getDataSeries(rawData, baseDate, this.Data.decadicSanitizer);
 		};
 
 		/**
@@ -422,17 +400,35 @@ function(Configurable, Persistable, Log, Graph, Form){
 		 * @param {String} name
 		 * @return {Backbone.View}
 		 */
-		App.createInputForm = function(name){
+		App.createOutputForm = function(name){
 			var form = new Form();
-				form.setName(name || 'inputForm');
+				form.setName(name || 'outputForm');
 				form.setCaption('Pins', true);
 
 				form.addTextArea('inputs', 'data', {
 					cols: 50,
 					rows: 1
 				});
-				form.addButton('load');
+
 				form.addSubmit('save');
+
+				var app = this;
+				var url = this.option('baseUrl') + this.option('outputConfigFile');
+
+				$.ajax({
+					url: url,
+					type: 'GET',
+					dataType: 'text',
+					async: false,
+					success: function(data){
+						form.setValues({
+							'inputs': data
+						});
+					},
+					error: function(response, status, error){
+						app.logger.show('Failed to fetch output config file: ' + url, app.logger.ERROR);
+					}
+				});
 
 			return form;
 		};
@@ -440,36 +436,10 @@ function(Configurable, Persistable, Log, Graph, Form){
 		/**
 		 * @param {Backbone.View} $form
 		 */
-		App.inputFormLoad = function($form){
+		App.outputFormSave = function($form){
 		try {
 			var app = this;
 			var url = this.option('baseUrl') + this.option('outputConfigFile');
-
-			$.ajax({
-				url: url,
-				type: 'GET',
-				dataType: 'text'
-			})
-			.done(function(data){
-				$form.setValues({
-					'inputs': data
-				});
-			})
-			.fail(function(response, status, error){
-				app.logger.show($form.getName() + ': ' + error.message, app.logger.ERROR);
-			});
-		} catch (e) {
-				//console.log(e.message);
-		}
-		};
-
-		/**
-		 * @param {Backbone.View} $form
-		 */
-		App.inputFormSubmit = function($form){
-		try {
-			var app = this;
-			var url = this.option('baseUrl') + this.option('inputConfigFile');
 			var data = $form.getValues();
 
 			$.ajax({
@@ -478,7 +448,7 @@ function(Configurable, Persistable, Log, Graph, Form){
 				data: data.inputs
 			})
 			.done(function(){
-				$form.reset();
+//				$form.reset();
 				app.logger.show($form.getName() + ': Data saved', app.logger.SUCCESS);
 			})
 			.fail(function(response, status, error){
@@ -537,7 +507,7 @@ function(Configurable, Persistable, Log, Graph, Form){
 				data: JSON.stringify(data)
 			})
 			.done(function(){
-				$form.reset();
+//				$form.reset();
 				app.logger.show($form.getName() + ': Data saved', app.logger.SUCCESS);
 			})
 			.fail(function(response, status, error){
@@ -1080,6 +1050,33 @@ function(Configurable, Persistable, Log, Graph, Form){
 				}
 
 				return new Date(ts);
+			}
+		};
+
+		App.Data = {
+			/**
+			 * On-off sanitizer
+			 * @param {Number} val
+			 * @return {Number|NaN}
+			 */
+			sigmaSanitizer: function(val){
+				return (val === -999) ? NaN : 100;
+			},
+			/**
+			 * Precise sanitizer
+			 * @param {Number} val
+			 * @return {Number|NaN}
+			 */
+			preciseSanitizer: function(val){
+				return (val === -999) ? NaN : Math.round(val/10, 1);
+			},
+			/**
+			 * One tenth sanitizer
+			 * @param {Number} val
+			 * @return {Number|NaN}
+			 */
+			decadicSanitizer: function(val){
+				return (val < 0) ? NaN : val / 10;
 			}
 		};
 
