@@ -7,7 +7,7 @@ require.config({
 		'jquery':		'lib/jquery',
 		'underscore':	'lib/uscore',
 		'backbone':		'lib/backbone',
-		'localstorage': 'lib/storage',
+		'localstorage':	'lib/storage',
 		'dygraph':		'lib/dygraph'
 	},
 	shim: {
@@ -18,7 +18,7 @@ require.config({
 			init: function(){
 				this._.templateSettings = {interpolate : /\{(.+?)\}/g};
 			},
-            exports: '_'
+			exports: '_'
         },
         'backbone': {
             deps: ['underscore', 'jquery'],
@@ -30,10 +30,16 @@ require.config({
 	}
 });
 
+
+// Debug instance
+window.testableApp = null;
+
 // Run application!
 require(['app'], function(App){
 
 	//console.log(App);
 
 	App.init();
+
+	window.testableApp = App;
 });
