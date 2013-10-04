@@ -1,12 +1,12 @@
 // Application bootstrap file
-// - Growduino Client v 0.2 -
+// - Growduino Client v 0.4 -
 
 define(['util/mx-conf', 'util/mx-pers', 'view/log', 'view/graph', 'view/form'],
 function(Configurable, Persistable, Log, Graph, Form){
 
 	var App = {};
 
-		App.VERSION = '0.3';
+		App.VERSION = '0.4';
 		App.NAME = 'GrowduinoClientApp';
 
 		App.defaultOptions = {
