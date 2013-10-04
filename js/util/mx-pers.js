@@ -15,7 +15,7 @@ define(['util/mx-base', 'underscore', 'backbone', 'localstorage'], function(Base
 		 * @param {Array|Object}
 		 * @return {Array}
 		 */
-		this.defaultSerializer = function(items) {
+		this.defaultSerializer = function(items){
 			var serialized = [];
 			var item;
 
@@ -32,7 +32,7 @@ define(['util/mx-base', 'underscore', 'backbone', 'localstorage'], function(Base
 		 * @param {Array}
 		 * @return {Array}
 		 */
-		this.defaultDeserializer = function(items) {
+		this.defaultDeserializer = function(items){
 			// @todo ?
 			return items;
 		};
@@ -43,7 +43,7 @@ define(['util/mx-base', 'underscore', 'backbone', 'localstorage'], function(Base
 		 *
 		 * @return {Backbone.LocalStorage} storage
 		 */
-		this.getStore = function() {
+		this.getStore = function(){
 			if (_.isEmpty(this.storage)) {
 				throw 'Invalid state: Storage is not set for the entity. Use this.setStore(name) instead.';
 			}
@@ -57,7 +57,7 @@ define(['util/mx-base', 'underscore', 'backbone', 'localstorage'], function(Base
 		 * @param {String} name
 		 * @return {Object} fluent
 		 */
-		this.setStore = function(name) {
+		this.setStore = function(name){
 			if (!_.isString(name)) {
 				throw 'Invalid argument: storage name must be a string.';
 			}
@@ -77,7 +77,7 @@ define(['util/mx-base', 'underscore', 'backbone', 'localstorage'], function(Base
 		 * @return {Object} fluent
 		 *
 		 */
-		this.save = function(key, data, serializer) {
+		this.save = function(key, data, serializer){
 			if (!_.isString(key)) {
 				throw 'Invalid argument: key must be a string.';
 			}
@@ -99,7 +99,7 @@ define(['util/mx-base', 'underscore', 'backbone', 'localstorage'], function(Base
 		 * @param {Function} deserializer [optional]
 		 * @return {Object|null}
 		 */
-		this.load = function(key, deserializer) {
+		this.load = function(key, deserializer){
 			if (!_.isString(key)) {
 				throw 'Invalid argument: key must be a string.';
 			}
@@ -119,6 +119,21 @@ define(['util/mx-base', 'underscore', 'backbone', 'localstorage'], function(Base
 			}
 
 			return null;
+		};
+
+		/** @return {Array} cache keys */
+		this.keys = function(){
+			var storage = this.getStore().localStorage();
+			var keys = [], name;
+			
+			for (var i in _.range(0, storage.length)) {
+				name = storage.key(i);
+				if (name) {
+					keys.push(name);
+				}
+			}
+
+			return keys;
 		};
 	};
 
