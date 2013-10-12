@@ -409,7 +409,7 @@ function(Configurable, Persistable, Log, Graph, Form){
 				form.setName(name || 'outputForm');
 				form.setCaption('Output', true);
 
-				form.addTextArea('output', 'DATA', {
+				form.addTextArea('output', null, {
 					cols: 50,
 					rows: 1
 				});
@@ -748,6 +748,7 @@ function(Configurable, Persistable, Log, Graph, Form){
 				try {
 
 				$(_.range(24)).each(function(hour){
+					hour = (hour < 10 ? '0' : '').concat(hour);
 					$.ajax({
 						url: basePath.concat(path, '/', date, '/', hour, '.jso'),
 						dataType: 'json',
@@ -755,7 +756,7 @@ function(Configurable, Persistable, Log, Graph, Form){
 						success: function(data){
 							pass = true;
 
-							$(app['get' + type + 'Data'].call(app, data.min, date.concat(' ', hour, ':' , '00'))).each(function(x, data) {
+							$(app['get' + type + 'Data'].call(app, data.min, date.concat(' ', hour, ':00'))).each(function(x, data) {
 								dayData[type].push(data);
 							});
 						},
