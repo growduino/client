@@ -739,6 +739,7 @@ function(Configurable, Persistable, Log, Graph, Form){
 			var dayData = {};
 			var pass = false;
 			var type, path;
+			var skip = [];	// predictive-load
 
 			for (var i in paths) {
 				path = paths[i];
@@ -749,6 +750,9 @@ function(Configurable, Persistable, Log, Graph, Form){
 
 				$(_.range(24)).each(function(hour){
 					hour = (hour < 10 ? '0' : '').concat(hour);
+
+					if (_.contains(skip, hour)) return;
+
 					$.ajax({
 						url: basePath.concat(path, '/', date, '/', hour, '.jso'),
 						dataType: 'json',
@@ -761,6 +765,7 @@ function(Configurable, Persistable, Log, Graph, Form){
 							});
 						},
 						error: function(){
+							if (!_.contains(skip, hour)) skip.push(hour);
 							// console.log(arguments);
 						}
 					});
@@ -822,6 +827,7 @@ function(Configurable, Persistable, Log, Graph, Form){
 			}
 
 			var dayData = [];
+			var skip = [];
 			var pass = false;
 
 			$(paths).each(function(i, path){
@@ -830,6 +836,8 @@ function(Configurable, Persistable, Log, Graph, Form){
 				$(_.values(_.range(1, 32))).each(function(x, day){
 					// month data
 					day = (day < 10 ? '0' : '').concat(day);
+
+					if (_.contains(skip, day)) return;
 
 					$.ajax({
 						url: currPath.concat('/', day, '.jso'),
@@ -851,6 +859,7 @@ function(Configurable, Persistable, Log, Graph, Form){
 							});
 						},
 						error: function(){
+							if (!_.contains(skip, day)) skip.push(day);
 //							console.log('failed to fetch: ' + month);
 						}
 					});
@@ -905,6 +914,7 @@ function(Configurable, Persistable, Log, Graph, Form){
 			}
 
 			var dayData = [];
+			var skip = [];
 			var pass = false;
 
 			$(paths).each(function(i, path){
@@ -913,6 +923,8 @@ function(Configurable, Persistable, Log, Graph, Form){
 				$(_.values(_.range(1, 13))).each(function(x, month){
 					// month data
 					month = (month < 10 ? '0' : '').concat(month);
+
+					if (_.contains(skip, month)) return;
 
 					$.ajax({
 						url: currPath.concat('/', month, '.jso'),
@@ -933,6 +945,7 @@ function(Configurable, Persistable, Log, Graph, Form){
 							});
 						},
 						error: function(){
+							if (!_.contains(skip, month)) skip.push(month);
 //							console.log('failed to fetch:');
 //							console.log(month);
 						}
