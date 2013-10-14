@@ -151,3 +151,5 @@ form .caption {
 .lft {float: left;}
 .rgt {float: right;}
 .clr {clear:both;}
+
+.loading {background-color: white; background-image: url(loading.gif); background-position: center center; background-repeat: no-repeat;}

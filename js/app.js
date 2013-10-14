@@ -10,8 +10,11 @@ function(Configurable, Persistable, Log, Graph, Form){
 		App.NAME = 'GrowduinoClientApp';
 
 		App.defaultOptions = {
-			baseUrl: 'http://arduino.natur.cuni.cz/',	// remote
-//			baseUrl: '/growduino/',	// local
+			/** @example
+			 *	http://192.168.0.23/
+			 *	http://arduino.server.com/
+			 */
+			baseUrl: 'http://arduino.natur.cuni.cz/',
 			configFile: 'config.jso',
 			inputConfigFile: 'vstup.jso',
 			outputConfigFile: 'vystup.jso',
@@ -202,10 +205,12 @@ function(Configurable, Persistable, Log, Graph, Form){
 				$graph.render($('#main'));
 			}
 
-			$graph.updateTitle(this.dataTypes.join('-'));
-
 			if (!_.contains(this.dataTypes, 'Time')) {
+				$graph.updateTitle(this.dataTypes.join('-'));
 				this.dataTypes.unshift('Time');
+			}
+			else {
+				$graph.updateTitle(_.rest(this.dataTypes).join('-'));
 			}
 
 			$graph.setData(this.data, {

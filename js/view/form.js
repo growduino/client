@@ -414,8 +414,7 @@ define(['underscore', 'backbone'], function(){
 					'left': 0,
 					'width': this.$el.width(),
 					'height': this.$el.height(),
-					'background': 'white',
-					'opacity': 0.6,
+					'opacity': 0.7,
 					'zIndex': +99
 				});
 			}
