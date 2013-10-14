@@ -558,7 +558,10 @@ function(Configurable, Persistable, Log, Graph, Form){
 			var form = new Form();
 				form.setName(name || 'graphControlForm');
 
-				var year = this.Time.getCurrentYear();
+				var year = this.Time.getCurrentYear(),
+					month = this.Time.getCurrentMonth(),
+					day = this.Time.getCurrentDay();
+
 				var opts = {};
 					opts[year.toString()] = year;
 
@@ -578,6 +581,12 @@ function(Configurable, Persistable, Log, Graph, Form){
 				form.addButton('unzoom', 'Reset view').hide();	// @todo plot event handler
 
 				form.setRenderer(form.allInLineRenderer);
+
+				form.setValues({
+					'year': year,
+					'month': month,
+					'day': day
+				});
 
 			return form;
 		};
