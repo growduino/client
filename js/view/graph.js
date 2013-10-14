@@ -76,8 +76,6 @@ function(Configurable, Persistable, Dygraph){
 		 * Draws graph.
 		 */
 		draw: function(options){
-			var self = this;
-
 			var meta = _.defaults(options || {}, this.meta);
 			var data = this.data;
 			var element = this.$el.find('#'.concat(this.cid)+' .graph-body').get(0)
@@ -88,8 +86,9 @@ function(Configurable, Persistable, Dygraph){
 				meta
 			);
 
+			var self = this;
 			this.plot.ready(function(){
-				self.setAnnotations.call(self);
+				self.setAnnotations();
 			});
 
 			return this;
@@ -107,21 +106,13 @@ function(Configurable, Persistable, Dygraph){
 			var max = [];
 			var maxDate = [];
 
-			var d, k, date;
+			var date, k;
 
 			$(series).each(function(x, data){
 				$(data).each(function(i, value){
 					if (0 === i) {
 						date = value;
 						return;
-
-//						d = value;
-//						date = d.getFullYear().toString()
-//								.concat('/', (d.getMonth() + 1 < 10 ? '0' : '').concat(d.getMonth() + 1))
-//								.concat('/', (d.getDate() < 10 ? '0' : '').concat(d.getDate()))
-//								.concat(' ', (d.getHours() < 10 ? '0' : '').concat(d.getHours()))
-//								.concat(':', (d.getMinutes() < 10 ? '0' : '').concat(d.getMinutes()), ':')
-//						return;
 					}
 
 					if (_.isNaN(value)) {
@@ -144,19 +135,19 @@ function(Configurable, Persistable, Dygraph){
 			$(_.keys(labels)).each(function(i, name){
 				annotations.push({
 					series: name,
-					x: minDate[i],
+					x: minDate[i].getTime(),
 					shortText: 'L',
 					text: 'Min: ' + min[i]
 				});
 				annotations.push({
 					series: name,
-					x: maxDate[i],
+					x: maxDate[i].getTime(),
 					shortText: 'H',
 					text: 'Max: ' + max[i]
 				});
 			});
 
-			plot.setAnnotations(annotations);
+			plot.setAnnotations(plot.annotations());
 		},
 
 		unzoom: function(){

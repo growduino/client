@@ -216,7 +216,8 @@ function(Configurable, Persistable, Log, Graph, Form){
 			$graph.setData(this.data, {
 				labels:  this.dataTypes,
 				colors: this.dataColors,
-				fillGraph: true
+				fillGraph: true,
+				legend: 'always'
 			});
 
 			// controls: custom date control
