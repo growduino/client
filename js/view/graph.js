@@ -137,13 +137,13 @@ function(Configurable, Persistable, Dygraph){
 					series: name,
 					x: minDate[i].getTime(),
 					shortText: 'L',
-					text: 'Min: ' + min[i]
+					text: 'Lo (min): ' + min[i]
 				});
 				annotations.push({
 					series: name,
 					x: maxDate[i].getTime(),
 					shortText: 'H',
-					text: 'Max: ' + max[i]
+					text: 'Hi (max): ' + max[i]
 				});
 			});
 
