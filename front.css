@@ -144,7 +144,7 @@ form .caption {
 
 /* graphs */
 .dygraph-legend {
-
+	z-index: 99;
 }
 
 /* misc */
