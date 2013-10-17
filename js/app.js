@@ -346,42 +346,41 @@ function(Configurable, Persistable, Log, Graph, Form){
 		};
 
 		/**
-		 * Data parser (dygraphs time series).
-		 *
-		 * @return {Array}
+		 * Data series composer (dygraph time series).
+		 * @returns {Array}
 		 */
-		App.getCombinedData = function(/*arguments*/){
+		App.getCombinedData = function(/* [series], ... */){
 			var length = arguments.length;
-			var series = [];
-			var found, item;
+			var series = {};
 
 			$(arguments).each(function(ai, ax){
-				// data series: tempData
+				// data series: [sensor data]
 				$(ax).each(function(di, dx){
 					// data series items: [date, value]
-					if (!dx[0]) return;
-
-					found = false;
-					$(series).each(function(si, sx){
-						// final series items: [date, value, ...]
-						if (sx[0].getTime() === dx[0].getTime()) {
-							found = true;
-							sx[ai + 1] = dx[1];
-						}
+					var date = dx[0] || (function(){throw 'Date is missing';})();
+					var ts = date.toString();
+					var item = _.range(length+1).map(function(){
+						return NaN;
 					});
-					if (!found) {
-						item = _.range(length + 1);
-						item = item.map(function(){
-							return NaN;
-						});
-						item[0] = dx[0];
-						item[ai + 1] = dx[1];
-						series.push(item);
+
+					if (!series[ts]) {
+						series[ts] = item;
 					}
+
+					if (!series[ts][0]) {
+						series[ts][0] = date;
+					}
+
+					series[ts][ai+1] = dx[1];
 				});
 			});
 
-			return series;
+			var data = [];
+			for (var d in series) {
+				data.push(series[d]);
+			}
+
+			return data;
 		};
 
 		/**
