@@ -30,12 +30,10 @@ define(['util/mx-conf', 'jquery', 'underscore', 'backbone'], function(Configurab
 		this.messages = new MessageList();
 
 		/**
-		 * @param  {Object} $el
 		 * @param  {Object} options [optional] #configurable mixin
 		 * @return {Backbone.View} fluent
 		 */
-		this.start = function($el, options) {
-			this.$el = $el || $('#log');
+		this.render = function(options) {
 			this.config(_.defaults(options || {}, this.defaultOptions));
 
 			var templateSelector = this.option('templateSelector');
@@ -47,8 +45,6 @@ define(['util/mx-conf', 'jquery', 'underscore', 'backbone'], function(Configurab
 			}
 
 			this.messageTemplate = $messageTemplate.html();
-			this.started = true;
-
 			return this;
 		};
 

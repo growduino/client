@@ -7,7 +7,7 @@ function(Configurable, Persistable, Log, Graph, Form){
 	var App = {};
 
 		App.VERSION = '0.4';
-		App.NAME = 'GrowduinoClientApp';
+		App.NAME = 'GrowduinoClient';
 
 		App.defaultOptions = {
 			/** @example
@@ -36,10 +36,13 @@ function(Configurable, Persistable, Log, Graph, Form){
 			var app = this;
 
 			this.config(_.defaults(options || {}, this.defaultOptions));
+			this.showVersion();
 
 			// logging
-			this.logger = new Log();
-			if (!this.logger.started) this.logger.start();
+			this.logger = new Log({
+				el: $('#log')
+			});
+			this.logger.render();
 			this.logger.show(this.NAME + ' ' + this.VERSION + ' started..', this.logger.SYSTEM);
 
 			// caching
@@ -94,7 +97,14 @@ function(Configurable, Persistable, Log, Graph, Form){
 			return this;
 		};
 
+		/**
+		 * @returns {App}
+		 */
+		App.showVersion = function(){
+			$('html head title').text(this.NAME + ' ' + this.VERSION);
 
+			return this;
+		};
 
 		/**
 		 * Data loader.
