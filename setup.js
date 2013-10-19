@@ -2,13 +2,29 @@
 
 // Config
 require.config({
-	baseUrl:	'js',
+	baseUrl:		'js',
+	enforceDefine:	true,
 	paths: {
-		'jquery':		'lib/jquery',
-		'underscore':	'lib/uscore',
-		'backbone':		'lib/backbone',
-		'localstorage':	'lib/storage',
-		'dygraph':		'lib/dygraph'
+		'jquery': [
+			'http://code.jquery.com/jquery-1.10.1.min',	// cdn
+			'lib/jquery'	// fallback
+		],
+		'underscore': [
+			'http://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.5.2/underscore-min',
+			'lib/uscore',
+		],
+		'backbone': [
+			'http://cdnjs.cloudflare.com/ajax/libs/backbone.js/1.0.0/backbone-min',
+			'lib/backbone'
+		],
+		'localstorage':	[
+			'http://cdnjs.cloudflare.com/ajax/libs/backbone-localstorage.js/1.0/backbone.localStorage-min',
+			'lib/storage',
+		],
+		'dygraph': [
+			'http://dygraphs.com/1.0.1/dygraph-combined',
+			'lib/dygraph'
+		]
 	},
 	shim: {
 		'jquery': {
