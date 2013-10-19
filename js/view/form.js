@@ -54,7 +54,7 @@ define(['underscore', 'backbone'], function(){
 		/** @var {Number} display mode: +1=full, -1=compact */
 		mode: +1,
 		toggleMode: function(){
-			var $trs = this.$el.find('*:has(.caption)').nextAll();
+			var $body = this.$el.find('*:has(.caption)').next('tbody');
 
 			if (+1 === this.mode) {
 				this.mode = -1;
@@ -63,7 +63,7 @@ define(['underscore', 'backbone'], function(){
 				this.mode = +1;
 			}
 
-			$trs.toggle();
+			$body.toggle();
 
 			return this;
 		},
@@ -358,8 +358,10 @@ define(['underscore', 'backbone'], function(){
 			}
 
 			var $table = $('<table>');
+			var $tbody = $('<tbody>');
 
 			$table.append(this.renderCaption());
+			$table.append($tbody);
 
 			var $row, $th, $td;
 			$(_.values(this.part[this.cid])).each(function(name, part) {
@@ -373,7 +375,7 @@ define(['underscore', 'backbone'], function(){
 					$row.hide();
 				}
 
-				$table.append($row);
+				$tbody.append($row);
 			});
 
 			this.$el.append($table);

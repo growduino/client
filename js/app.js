@@ -56,11 +56,24 @@ function(Configurable, Persistable, Log, Graph, Form){
 			// config form
 			var $configForm = this.getComponent('configForm');
 				$configForm.addEvents({
+					'change [name=use_dhcp]': function(){
+						// hide manual config fields
+						var $dhcp = this.getPart('use_dhcp').$input;
+						var $rows = $dhcp.parents('tr').nextAll(':lt(4)');
+
+						if ($dhcp.val().match('1')) {
+							$rows.hide();
+						}
+						else {
+							$rows.show();
+						}
+					},
 					'click [name=save]': function(evt){
 						evt.preventDefault();
 						app['processConfigForm'].call(app, $configForm);
 					}
 				});
+
 				$configForm.$el.addClass('component');
 				$configForm.render($('#top')).toggleMode();
 
@@ -480,10 +493,24 @@ function(Configurable, Persistable, Log, Graph, Form){
 		 * @return {Backbone.View}
 		 */
 		App.createConfigForm = function(name){
+			// create form
 			var form = new Form();
+
 				form.setName(name || 'configForm');
 				form.setCaption('Network', true);
+				form.addSelect('use_dhcp', 'USE_DHCP', {
+					'0': 'no',
+					'1': 'yes'
+				});
+				form.addText('mac', 'MAC');
+				form.addText('ip', 'IP');
+				form.addText('netmask', 'NETMASK');
+				form.addText('gateway', 'GATEWAY');
+				form.addText('ntp', 'NTP');
 
+				form.addSubmit('save', 'Save');
+
+			// preset fields
 			var app = this;
 			var url = this.option('baseUrl') + this.option('configFile');
 
@@ -493,26 +520,13 @@ function(Configurable, Persistable, Log, Graph, Form){
 				dataType: 'json',
 				async: false,
 				success: function(data){
-					// dynamic fields
-					for (var name in data) {
-						if (name.match('use_dhcp')) {
-							form.addSelect(name, name.toUpperCase(), {
-								'0': 'no',
-								'1': 'yes'
-							});
-						}
-						else {
-							form.addText(name, name.toUpperCase());
-						}
-					}
+					// set values
 					form.setValues(data);
 				},
 				error: function(){
 					app.logger.show('Failed to fetch config file: ' + url, app.logger.ERROR);
 				}
 			});
-
-			form.addSubmit('save', 'Save');
 
 			return form;
 		};
